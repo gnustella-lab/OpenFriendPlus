@@ -8,12 +8,9 @@
     "TitleScreenMixin",
     "PauseScreenMixin",
     "JoinMultiplayerScreenMixin",
-    "GuiMixin",
-    "ScreenMouseMixin"
+    "GuiMixin"
   ],
   "injectors": {
     "defaultRequire": 1
   }
 }
-</content>
-</invoke>

@@ -143,7 +143,7 @@ public final class HostTab implements FriendsOverlayScreen.Tab {
             String status;
             int color;
             if (state.host().running) {
-                status = "Hosting → " + state.host().target;
+                status = "Hosting > " + state.host().target;
                 color = UTheme.ONLINE;
             } else if (mode == Mode.LOCAL_PUBLISH) {
                 status = "Opens your current single-player world to LAN, then bridges Friends joins to it.";

@@ -202,7 +202,7 @@ public final class FriendsTab implements FriendsOverlayScreen.Tab {
 
             if (state.friends().isEmpty() && addState == AddFriendTab.State.IDLE) {
                 int textY = scroll.getY() + scroll.getHeight() / 2 - r.textHeight() / 2;
-                r.drawTextCentered(x, textY, width, "No friends yet — search by name above.", UTheme.TEXT_DIM);
+                r.drawTextCentered(x, textY, width, "No friends yet -- search by name above.", UTheme.TEXT_DIM);
             }
         }
     }

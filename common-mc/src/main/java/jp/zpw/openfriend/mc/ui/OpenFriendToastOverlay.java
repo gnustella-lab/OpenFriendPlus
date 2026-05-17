@@ -1,18 +1,16 @@
 /*
  * OpenFriend — Copyright (c) 2026 ZSHARE. Licensed under the MIT License.
- * Variant for group-b (Minecraft 1.19 - 1.19.4): PoseStack-based rendering.
  */
 package jp.zpw.openfriend.mc.ui;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
 import jp.zpw.openfriend.common.notice.NoticeSink;
+import jp.zpw.openfriend.common.ui.UTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiComponent;
-import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.util.FormattedCharSequence;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -35,6 +33,9 @@ public final class OpenFriendToastOverlay {
     private static final Object LOCK = new Object();
     private static final List<Entry> entries = new ArrayList<>();
     private static volatile Entry activeDetail = null;
+    private static volatile boolean firstPushLogged = false;
+    private static volatile boolean firstRenderLogged = false;
+    private static volatile long renderCalls = 0;
 
     private OpenFriendToastOverlay() {}
 
@@ -43,9 +44,28 @@ public final class OpenFriendToastOverlay {
         synchronized (LOCK) {
             entries.add(e);
         }
+        if (!firstPushLogged) {
+            firstPushLogged = true;
+            org.slf4j.LoggerFactory.getLogger("openfriend").info("OpenFriendToastOverlay.push fired: level={} title={} (entries={}, renderCalls={})",
+                level, title, entries.size(), renderCalls);
+        }
     }
 
-    public static void render(PoseStack pose, int screenWidth) {
+    public static int entryCount() {
+        synchronized (LOCK) { return entries.size(); }
+    }
+
+    public static long renderCallCount() {
+        return renderCalls;
+    }
+
+    public static void render(GuiGraphics g, int screenWidth) {
+        renderCalls++;
+        if (!firstRenderLogged) {
+            firstRenderLogged = true;
+            org.slf4j.LoggerFactory.getLogger("openfriend").info("OpenFriendToastOverlay.render first call: screenWidth={} entries={}",
+                screenWidth, entries.size());
+        }
         long now = System.currentTimeMillis();
         List<Entry> snapshot;
         synchronized (LOCK) {
@@ -72,13 +92,31 @@ public final class OpenFriendToastOverlay {
             int slideOffset = (int) ((1f - slide) * (WIDTH + MARGIN));
             int x = screenWidth - WIDTH - MARGIN + slideOffset;
             int y = MARGIN + i * (HEIGHT + GAP);
-            renderToast(pose, font, x, y, e, mouseX, mouseY);
+            renderToast(g, font, x, y, e, mouseX, mouseY);
         }
 
         Entry detail = activeDetail;
         if (detail != null) {
-            renderDetail(pose, font, screenWidth, screenHeight, detail);
+            renderDetail(g, font, screenWidth, screenHeight, detail);
         }
+    }
+
+    public static boolean isDetailOpen() {
+        return activeDetail != null;
+    }
+
+    public static boolean dismissDetail() {
+        if (activeDetail == null) return false;
+        activeDetail = null;
+        return true;
+    }
+
+    public static boolean handleKey(int keyCode) {
+        if (keyCode == 256 && activeDetail != null) {
+            activeDetail = null;
+            return true;
+        }
+        return false;
     }
 
     public static boolean handleClick(int mouseX, int mouseY, int screenWidth) {
@@ -112,70 +150,66 @@ public final class OpenFriendToastOverlay {
         return 1f - (1f - t) * (1f - t);
     }
 
-    private static void renderToast(PoseStack pose, Font font, int x, int y, Entry e, int mouseX, int mouseY) {
-        int bg     = 0xF00A0A0A;
-        int border = borderFor(e.level);
-        GuiComponent.fill(pose, x, y, x + WIDTH, y + HEIGHT, bg);
-        GuiComponent.fill(pose, x, y, x + WIDTH, y + 1, border);
-        GuiComponent.fill(pose, x, y + HEIGHT - 1, x + WIDTH, y + HEIGHT, border);
-        GuiComponent.fill(pose, x, y, x + 1, y + HEIGHT, border);
-        GuiComponent.fill(pose, x + WIDTH - 1, y, x + WIDTH, y + HEIGHT, border);
+    private static void drawBorderedBox(GuiGraphics g, int x, int y, int w, int h, int bg, int border) {
+        g.fill(x, y, x + w, y + h, bg);
+        g.fill(x, y, x + w, y + 1, border);
+        g.fill(x, y + h - 1, x + w, y + h, border);
+        g.fill(x, y, x + 1, y + h, border);
+        g.fill(x + w - 1, y, x + w, y + h, border);
+    }
+
+    private static void renderToast(GuiGraphics g, Font font, int x, int y, Entry e, int mouseX, int mouseY) {
+        int border = UTheme.noticeBorder(e.level);
+        drawBorderedBox(g, x, y, WIDTH, HEIGHT, UTheme.TOAST_BG, border);
 
         int textPadL = 8;
         int textPadR = CLOSE_W + 8;
         int textMaxW = WIDTH - textPadL - textPadR;
-        int titleColor = titleColorFor(e.level);
         String title = ellipsize(font, e.title, textMaxW);
         String body  = ellipsize(font, e.body,  textMaxW);
-        font.draw(pose, title, (float)(x + textPadL), (float)(y + 6),                       titleColor);
-        font.draw(pose, body,  (float)(x + textPadL), (float)(y + 6 + font.lineHeight + 2), 0xFFCCCCCC);
+        g.drawString(font, Component.literal(title), x + textPadL, y + 6,                       UTheme.noticeTitle(e.level), false);
+        g.drawString(font, Component.literal(body),  x + textPadL, y + 6 + font.lineHeight + 2, UTheme.TOAST_BODY,           false);
 
         int closeX = x + WIDTH - CLOSE_W - 4;
         int closeY = y + 4;
         boolean hover = mouseX >= closeX && mouseX < closeX + CLOSE_W &&
                         mouseY >= closeY && mouseY < closeY + CLOSE_W;
-        int xColor = hover ? 0xFFFFFFFF : 0xFFAAAAAA;
-        font.draw(pose, "x", (float)(closeX + 2), (float)(closeY + 1), xColor);
+        g.drawString(font, "x", closeX + 2, closeY + 1, hover ? UTheme.TEXT : UTheme.TOAST_CLOSE, false);
     }
 
-    private static void renderDetail(PoseStack pose, Font font, int sw, int sh, Entry e) {
-        GuiComponent.fill(pose, 0, 0, sw, sh, 0xC0000000);
+    private static void renderDetail(GuiGraphics g, Font font, int sw, int sh, Entry e) {
+        g.fill(0, 0, sw, sh, UTheme.DIM_OVERLAY);
 
         int innerW = DETAIL_W - DETAIL_PAD * 2;
-        List<net.minecraft.util.FormattedCharSequence> bodyLines  = font.split(net.minecraft.network.chat.FormattedText.of(e.body),  innerW);
-        List<net.minecraft.util.FormattedCharSequence> titleLines = font.split(net.minecraft.network.chat.FormattedText.of(e.title), innerW);
+        List<FormattedCharSequence> bodyLines  = font.split(FormattedText.of(e.body),  innerW);
+        List<FormattedCharSequence> titleLines = font.split(FormattedText.of(e.title), innerW);
         int titleH = titleLines.size() * font.lineHeight;
         int bodyH  = bodyLines.size()  * font.lineHeight;
         int hintH  = font.lineHeight;
         int contentH = titleH + 8 + bodyH + 12 + hintH;
-        int panelH = contentH + DETAIL_PAD * 2;
+        int panelH   = contentH + DETAIL_PAD * 2;
 
         int panelX = (sw - DETAIL_W) / 2;
         int panelY = (sh - panelH) / 2;
 
-        int border = borderFor(e.level);
-        GuiComponent.fill(pose, panelX, panelY, panelX + DETAIL_W, panelY + panelH, 0xF00A0A0A);
-        GuiComponent.fill(pose, panelX, panelY, panelX + DETAIL_W, panelY + 1, border);
-        GuiComponent.fill(pose, panelX, panelY + panelH - 1, panelX + DETAIL_W, panelY + panelH, border);
-        GuiComponent.fill(pose, panelX, panelY, panelX + 1, panelY + panelH, border);
-        GuiComponent.fill(pose, panelX + DETAIL_W - 1, panelY, panelX + DETAIL_W, panelY + panelH, border);
+        drawBorderedBox(g, panelX, panelY, DETAIL_W, panelH, UTheme.TOAST_BG, UTheme.noticeBorder(e.level));
 
         int textX = panelX + DETAIL_PAD;
         int cy = panelY + DETAIL_PAD;
-        int titleColor = titleColorFor(e.level);
-        for (net.minecraft.util.FormattedCharSequence line : titleLines) {
-            font.draw(pose, line, (float) textX, (float) cy, titleColor);
+        int titleColor = UTheme.noticeTitle(e.level);
+        for (FormattedCharSequence line : titleLines) {
+            g.drawString(font, line, textX, cy, titleColor, false);
             cy += font.lineHeight;
         }
         cy += 8;
-        for (net.minecraft.util.FormattedCharSequence line : bodyLines) {
-            font.draw(pose, line, (float) textX, (float) cy, 0xFFFFFFFF);
+        for (FormattedCharSequence line : bodyLines) {
+            g.drawString(font, line, textX, cy, UTheme.TEXT, false);
             cy += font.lineHeight;
         }
         cy += 12;
         String hint = "Click anywhere to dismiss";
         int hintW = font.width(hint);
-        font.draw(pose, hint, (float)(textX + (innerW - hintW) / 2), (float) cy, 0xFF777777);
+        g.drawString(font, Component.literal(hint), textX + (innerW - hintW) / 2, cy, UTheme.TEXT_DIM, false);
     }
 
     private static String ellipsize(Font font, String s, int maxWidth) {
@@ -193,24 +227,6 @@ public final class OpenFriendToastOverlay {
             acc += cw;
         }
         return b + ell;
-    }
-
-    private static int borderFor(NoticeSink.Level level) {
-        switch (level) {
-            case ERROR:   return 0xFFE05656;
-            case WARN:    return 0xFFF5B35A;
-            case SUCCESS: return 0xFF6CD27A;
-            default:      return 0xFFFFCC2E;
-        }
-    }
-
-    private static int titleColorFor(NoticeSink.Level level) {
-        switch (level) {
-            case ERROR:   return 0xFFE05656;
-            case WARN:    return 0xFFF5B35A;
-            case SUCCESS: return 0xFF6CD27A;
-            default:      return 0xFFFFFFFF;
-        }
     }
 
     private static final class Entry {

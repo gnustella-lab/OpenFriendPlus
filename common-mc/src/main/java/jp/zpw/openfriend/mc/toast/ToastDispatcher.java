@@ -11,7 +11,6 @@ import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.toasts.ToastComponent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 
 public final class ToastDispatcher implements IpcListener {
 
@@ -42,39 +41,50 @@ public final class ToastDispatcher implements IpcListener {
                 mc.execute(() -> {
                     SignInScreen cur = SignInScreen.current();
                     if (cur != null) cur.markSignedIn(displayName);
-                    ToastComponent toasts = mc.getToasts();
-                    if (toasts != null) {
-                        toasts.addToast(new FriendsToast(
-                                new TextComponent("Signed in"),
-                                new TextComponent(displayName)));
-                    }
+                    deferAddToast(mc, new FriendsToast(
+                            Component.literal("Signed in"),
+                            Component.literal(displayName)));
                 });
                 break;
             }
             case "friend.requestIncoming":
             case "friend.added":
             case "friend.joined": {
-                ToastComponent toasts = mc.getToasts();
-                if (toasts == null) return;
                 Component title;
                 Component body;
                 if (method.equals("friend.requestIncoming")) {
                     if (name.isEmpty()) return;
-                    title = new TextComponent("Friend request");
-                    body  = new TextComponent(name);
+                    title = Component.literal("Friend request");
+                    body  = Component.literal(name);
                 } else if (method.equals("friend.added")) {
                     if (name.isEmpty()) return;
-                    title = new TextComponent("Friend added");
-                    body  = new TextComponent(name);
+                    title = Component.literal("Friend added");
+                    body  = Component.literal(name);
                 } else {
                     String peer = params.has("pmid") ? params.get("pmid").getAsString().substring(0, 8) : "Someone";
-                    title = new TextComponent("Friend joined");
-                    body  = new TextComponent(peer + "…");
+                    title = Component.literal("Friend joined");
+                    body  = Component.literal(peer + "...");
                 }
-                toasts.addToast(new FriendsToast(title, body));
+                deferAddToast(mc, new FriendsToast(title, body));
                 break;
             }
             default:
         }
+    }
+
+    private static void deferAddToast(Minecraft mc, FriendsToast toast) {
+        Thread t = new Thread(() -> {
+            int attempts = 0;
+            while (mc.getOverlay() != null && attempts < 200) {
+                try { Thread.sleep(50); } catch (InterruptedException e) { return; }
+                attempts++;
+            }
+            mc.execute(() -> {
+                ToastComponent toasts = mc.getToasts();
+                if (toasts != null) toasts.addToast(toast);
+            });
+        }, "openfriend-toast-defer");
+        t.setDaemon(true);
+        t.start();
     }
 }

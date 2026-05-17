@@ -22,8 +22,8 @@
   ],
   "accessWidener": "openfriend.accesswidener",
   "depends": {
-    "fabricloader": ">=0.11.0",
-    "minecraft": "1.16.5",
-    "java": ">=8"
+    "fabricloader": ">=0.16.0",
+    "minecraft": ">=1.16.5",
+    "java": ">=17"
   }
 }

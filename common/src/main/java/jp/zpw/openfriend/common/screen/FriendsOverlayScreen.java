@@ -61,7 +61,7 @@ public class FriendsOverlayScreen {
 
         header.setBackground(UPanel.Background.SURFACE_ALT);
 
-        closeBtn = new UButton("✕", () -> {
+        closeBtn = new UButton("X", () -> {
             if (this.onClose != null) this.onClose.run();
         }).setStyle(UButton.Style.GHOST);
 
