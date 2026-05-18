@@ -9,6 +9,7 @@ logs/
 *.log
 *.tmp
 *.class
+OpenFriend original/*.jar
 
 .idea/
 *.iml
