@@ -26,6 +26,15 @@ Jars para instalar na pasta mods:
    Mundo de um jogador: Tambem funciona em mundos de um jogador
    Servidor: nao instalar como mod de servidor; nao e "Cliente e servidor" nem "Requerido em ambos"
 
+4. build/libs/OpenFriendPlus-forge-1.7.10.jar
+   Loader: Forge
+   Minecraft: 1.7.10
+   Java: 8 ou superior
+   Origem: gerado a partir de OpenFriend original/OpenFriend-forge-1.7.10.jar
+   Encaixe nas opcoes: Apenas cliente
+   Mundo de um jogador: Tambem funciona em mundos de um jogador
+   Servidor: nao instalar como mod de servidor; nao e "Cliente e servidor" nem "Requerido em ambos"
+
 Jars que NAO devem ser instalados diretamente:
 
 - common/build/libs/common-1.0.0.jar
@@ -40,6 +49,7 @@ Jars que NAO devem ser instalados diretamente:
 - src-forge-1.20.4/forge/build/libs/forge-1.0.0-dev-shadow.jar
 - src-1.16.5/build/libs/openfriend-plus-1.0.0.jar
 - src-forge-1.20.4/build/libs/openfriend-plus-1.0.0.jar
+- OpenFriend original/OpenFriend-forge-1.7.10.jar
 
 Observacao:
 Os jars "common", "common-mc", "helper", "transformProduction*" e "dev-shadow"
