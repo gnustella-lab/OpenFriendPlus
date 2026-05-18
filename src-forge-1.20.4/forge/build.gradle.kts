@@ -9,7 +9,7 @@ architectury {
 }
 
 loom {
-    accessWidenerPath.set(project(":common-mc").file("src/main/resources/openfriend.accesswidener"))
+    accessWidenerPath.set(project(":common-mc").file("src/main/resources/openfriendplus.accesswidener"))
     forge {
         convertAccessWideners.set(true)
     }

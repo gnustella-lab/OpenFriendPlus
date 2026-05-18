@@ -10,9 +10,9 @@ val mcVersion: String = project.property("minecraft_version").toString()
 val javaRelease: String = project.property("java_release").toString()
 
 loom {
-    accessWidenerPath.set(file("src/main/resources/openfriend.accesswidener"))
+    accessWidenerPath.set(file("src/main/resources/openfriendplus.accesswidener"))
     mixin {
-        defaultRefmapName.set("openfriend.refmap.json")
+        defaultRefmapName.set("openfriendplus.refmap.json")
     }
 }
 

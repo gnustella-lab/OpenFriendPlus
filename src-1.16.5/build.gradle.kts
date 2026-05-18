@@ -46,8 +46,19 @@ subprojects {
 }
 
 tasks.register("buildAll") {
-    dependsOn(":fabric:build", ":forge:build", ":neoforge:build")
+    dependsOn(":fabric:build")
     doLast {
-        println("=== OpenFriend mod loaders built ===")
+        println("=== OpenFriend Plus mod loaders built ===")
+    }
+}
+
+
+tasks.register("printBuildInfo") {
+    doLast {
+        println("mod_name=${property("mod_name")}")
+        println("mod_id=${property("mod_id")}")
+        println("mod_version=${property("mod_version")}")
+        println("minecraft_version=${property("minecraft_version")}")
+        println("loaders=fabric")
     }
 }

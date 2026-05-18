@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "dev.gnustella.openfriendplus.mc.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "minVersion": "0.8",
+  "refmap": "openfriendplus.refmap.json",
+  "client": [
+    "TitleScreenMixin",
+    "PauseScreenMixin",
+    "JoinMultiplayerScreenMixin",
+    "GuiMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

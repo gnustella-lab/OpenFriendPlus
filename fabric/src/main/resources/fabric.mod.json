@@ -1,26 +1,27 @@
 {
   "schemaVersion": 1,
-  "id": "openfriend",
+  "id": "openfriendplus",
   "version": "${version}",
-  "name": "OpenFriend",
-  "description": "Bridge the Minecraft Java Friends List (snapshot 26.2+) to any TCP server. Brings the Friends List UI to older Minecraft versions.",
-  "authors": ["ZSHARE"],
+  "name": "OpenFriend Plus",
+  "description": "Unofficial enhanced fork of OpenFriendMod with improved UX, privacy options, diagnostics, translations, and modpack-friendly defaults.",
+  "authors": ["gnustella-lab"],
+  "contributors": ["ZSHARE - original OpenFriendMod author"],
   "contact": {
-    "homepage": "https://openfriend.net",
-    "sources": "https://github.com/zerozshare/OpenFriendMod",
-    "issues": "https://github.com/zerozshare/OpenFriendMod/issues"
+    "homepage": "https://modrinth.com/mod/openfriend-plus",
+    "sources": "https://github.com/gnustella-lab/OpenFriendPlus",
+    "issues": "https://github.com/gnustella-lab/OpenFriendPlus/issues"
   },
   "license": "MIT",
-  "icon": "assets/openfriend/icon.png",
+  "icon": "assets/openfriendplus/textures/gui/openfriendplus_icon.png",
   "environment": "client",
   "entrypoints": {
-    "client": ["jp.zpw.openfriend.fabric.OpenFriendFabricClient"]
+    "client": ["dev.gnustella.openfriendplus.fabric.OpenFriendPlusFabricClient"]
   },
   "mixins": [
-    "openfriend.mixins.json",
-    "openfriend.fabric.mixins.json"
+    "openfriendplus.mixins.json",
+    "openfriendplus.fabric.mixins.json"
   ],
-  "accessWidener": "openfriend.accesswidener",
+  "accessWidener": "openfriendplus.accesswidener",
   "depends": {
     "fabricloader": ">=0.16.0",
     "minecraft": ">=1.16.5",

@@ -8,7 +8,7 @@ pluginManagement {
         mavenCentral()
     }
 }
-rootProject.name = "openfriend-mod"
+rootProject.name = "openfriend-plus"
 include("helper")
 include("common")
 include("common-mc")
