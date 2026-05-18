@@ -5,6 +5,8 @@
 package dev.gnustella.openfriendplus.mc.ui;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.gnustella.openfriendplus.common.privacy.PrivacyFormatter;
+import dev.gnustella.openfriendplus.mc.OpenFriendPlusMod;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiComponent;
@@ -23,6 +25,7 @@ public final class SignInScreen extends Screen {
     private static final int CODE_COLOR = 0xFF7BC8FF;
     private static final int DIM = 0xFF777777;
     private static final int SUCCESS = 0xFF6CD27A;
+    private static final int WARN = 0xFFFFD27A;
 
     private static volatile SignInScreen current;
 
@@ -102,8 +105,9 @@ public final class SignInScreen extends Screen {
         int codeLabelY = instrY + this.font.lineHeight * 2 + 14;
         GuiComponent.drawCenteredString(pose, this.font, "2. Enter this code:", this.width / 2, codeLabelY, DIM);
 
+        String displayCode = new PrivacyFormatter(OpenFriendPlusMod.config()).maskDeviceCode(userCode);
         int codeY = codeLabelY + this.font.lineHeight + 12;
-        int codeW = this.font.width(userCode) * 2;
+        int codeW = this.font.width(displayCode) * 2;
         int codeBoxX1 = this.width / 2 - codeW / 2 - 10;
         int codeBoxX2 = this.width / 2 + codeW / 2 + 10;
         GuiComponent.fill(pose, codeBoxX1, codeY - 4, codeBoxX2, codeY + this.font.lineHeight * 2 + 4, 0xFF000000);
@@ -111,7 +115,7 @@ public final class SignInScreen extends Screen {
         pose.translate(this.width / 2f, codeY + this.font.lineHeight, 0);
         pose.scale(2.0f, 2.0f, 1.0f);
         pose.translate(-this.width / 2f, -(codeY + this.font.lineHeight), 0);
-        GuiComponent.drawCenteredString(pose, this.font, userCode, this.width / 2, codeY, CODE_COLOR);
+        GuiComponent.drawCenteredString(pose, this.font, displayCode, this.width / 2, codeY, CODE_COLOR);
         pose.popPose();
 
         int statusY = my + PANEL_HEIGHT - 40;
@@ -120,6 +124,7 @@ public final class SignInScreen extends Screen {
         } else {
             GuiComponent.drawCenteredString(pose, this.font, "Waiting for sign-in…", this.width / 2, statusY, DIM);
         }
+        GuiComponent.drawCenteredString(pose, this.font, "Never share this code on stream.", this.width / 2, statusY + this.font.lineHeight + 2, WARN);
     }
 
     @Override

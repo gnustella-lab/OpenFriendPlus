@@ -5,6 +5,7 @@ package dev.gnustella.openfriendplus.common.screen;
 
 import dev.gnustella.openfriendplus.common.model.Friend;
 import dev.gnustella.openfriendplus.common.model.PresenceStatus;
+import dev.gnustella.openfriendplus.common.privacy.PrivacyFormatter;
 import dev.gnustella.openfriendplus.common.ui.UButton;
 import dev.gnustella.openfriendplus.common.ui.UComponent;
 import dev.gnustella.openfriendplus.common.ui.URenderer;
@@ -30,6 +31,7 @@ public class FriendEntry extends UComponent {
     }
 
     private final Friend friend;
+    private final PrivacyFormatter privacy;
     private PresenceStatus status = PresenceStatus.UNKNOWN;
     private boolean blocked;
     private final Actions actions;
@@ -43,7 +45,12 @@ public class FriendEntry extends UComponent {
     private Runnable onMenuToggle;
 
     public FriendEntry(Friend friend, Actions actions) {
+        this(friend, actions, null);
+    }
+
+    public FriendEntry(Friend friend, Actions actions, PrivacyFormatter privacy) {
         this.friend = friend;
+        this.privacy = privacy;
         this.actions = actions == null ? new Actions() {} : actions;
         this.joinBtn   = new UButton(">", this::triggerJoin).setStyle(UButton.Style.PRIMARY);
         this.joinBtn.setVisible(false);
@@ -133,7 +140,8 @@ public class FriendEntry extends UComponent {
         if (hovered) r.fillRect(x, y, width, rowH, UTheme.SURFACE_ALT);
 
         r.fillRect(x + PAD_X, y + (rowH - HEAD_SIZE) / 2, HEAD_SIZE, HEAD_SIZE, UTheme.SURFACE);
-        r.drawHead(x + PAD_X, y + (rowH - HEAD_SIZE) / 2, HEAD_SIZE, friend.profileId.toString());
+        String headId = privacy != null && privacy.hidesIdentity() ? "" : friend.profileId.toString();
+        r.drawHead(x + PAD_X, y + (rowH - HEAD_SIZE) / 2, HEAD_SIZE, headId);
 
         int textX = x + PAD_X + HEAD_SIZE + 10;
         int textY = y + (rowH - r.textHeight() * 2 - 2) / 2;
@@ -141,7 +149,7 @@ public class FriendEntry extends UComponent {
         int rightEdge = menuBtn.getX();
         if (joinBtn.isVisible()) rightEdge = Math.min(rightEdge, joinBtn.getX());
         int textMaxW = Math.max(0, rightEdge - textX - 6);
-        r.drawTextClipped(textX, textY,                      textMaxW, friend.name, nameColor);
+        r.drawTextClipped(textX, textY,                      textMaxW, displayName(), nameColor);
         r.drawTextClipped(textX, textY + r.textHeight() + 2, textMaxW, statusLabel(), statusColor());
 
         if (joinBtn.isVisible()) {
@@ -177,6 +185,10 @@ public class FriendEntry extends UComponent {
             case OFFLINE:
             default:                    return "Offline";
         }
+    }
+
+    private String displayName() {
+        return privacy == null ? friend.name : privacy.maskName(friend.name);
     }
 
     private int statusColor() {

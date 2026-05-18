@@ -30,14 +30,14 @@ public final class MCScreenOpener implements FriendsController.MultiplayBridge, 
         Minecraft mc = Minecraft.getInstance();
         if (mc == null) return;
         if (controller == null) {
-            OpenFriendPlusMod.LOG.warn("OpenFriend overlay requested but controller not initialised");
+            OpenFriendPlusMod.LOG.warn("OpenFriend Plus overlay requested but controller not initialised");
             return;
         }
         try {
             FriendsOverlayScreen overlay = controller.buildOverlay(() -> mc.setScreen(null));
             mc.setScreen(new MCScreenWrapper(overlay));
         } catch (Throwable t) {
-            OpenFriendPlusMod.LOG.error("OpenFriend overlay open failed", t);
+            OpenFriendPlusMod.LOG.error("OpenFriend Plus overlay open failed", t);
         }
     }
 
@@ -55,7 +55,14 @@ public final class MCScreenOpener implements FriendsController.MultiplayBridge, 
             return false;
         }
         if (mc.getSingleplayerServer().isPublished()) {
+            int port = mc.getSingleplayerServer().getPort();
             mc.setScreen(null);
+            if (port > 0) {
+                onServerPublished(port);
+            } else {
+                sendChat(Component.literal("[OpenFriend Plus] World is open to LAN, but the LAN port is unavailable")
+                        .withStyle(ChatFormatting.RED));
+            }
             return true;
         }
         GameType gameType;
@@ -75,19 +82,20 @@ public final class MCScreenOpener implements FriendsController.MultiplayBridge, 
         mc.setScreen(null);
         boolean ok = mc.getSingleplayerServer().publishServer(gameType, allowCheats, port);
         if (ok) {
-            sendChat(Component.literal("[OpenFriend] ")
+            sendChat(Component.literal("[OpenFriend Plus] ")
                     .withStyle(ChatFormatting.AQUA)
                     .append(Component.literal("Opened to LAN on port " + port + " (max " + maxPlayers + "). Bridging to your Friends list...")
                             .withStyle(ChatFormatting.WHITE)));
             onServerPublished(port);
         } else {
-            sendChat(Component.literal("[OpenFriend] Failed to open to LAN (port " + port + ")")
+            sendChat(Component.literal("[OpenFriend Plus] Failed to open to LAN (port " + port + ")")
                     .withStyle(ChatFormatting.RED));
         }
         return ok;
     }
 
     private volatile int lastBridgedPort = -1;
+    private volatile int bridgeInFlightPort = -1;
 
 
 
@@ -97,21 +105,23 @@ public final class MCScreenOpener implements FriendsController.MultiplayBridge, 
         if (controller == null || controller.ipc() == null || !controller.ipc().isRunning()) return;
 
 
-        if (lastBridgedPort == port) return;
+        if (lastBridgedPort == port || bridgeInFlightPort == port) return;
 
 
-        lastBridgedPort = port;
+        bridgeInFlightPort = port;
         String target = "127.0.0.1:" + port;
-        OpenFriendPlusMod.LOG.info("OpenFriend: bridging to LAN port {}", port);
+        OpenFriendPlusMod.LOG.info("OpenFriend Plus: bridging to LAN port {}", port);
         controller.ipc().requestAsync("host.start",
                 IpcClient.params("target", target, "useBypass", false))
                 .whenComplete((res, err) -> {
+                    bridgeInFlightPort = -1;
                     if (err != null) {
                         OpenFriendPlusToastOverlay.push(
                                 dev.gnustella.openfriendplus.common.notice.NoticeSink.Level.ERROR,
                                 "Bridge failed",
                                 err.getMessage() == null ? "Unknown error" : err.getMessage());
                     } else {
+                        lastBridgedPort = port;
                         OpenFriendPlusToastOverlay.push(
                                 dev.gnustella.openfriendplus.common.notice.NoticeSink.Level.SUCCESS,
                                 "World shared",
@@ -138,10 +148,10 @@ public final class MCScreenOpener implements FriendsController.MultiplayBridge, 
             try {
                 mc.setScreen(null);
                 ServerAddress addr = ServerAddress.parseString(hostPort);
-                ServerData data = new ServerData("OpenFriend join", hostPort, ServerData.Type.OTHER);
+                ServerData data = new ServerData("OpenFriend Plus join", hostPort, ServerData.Type.OTHER);
                 ConnectScreen.startConnecting(null, mc, addr, data, false);
             } catch (Throwable t) {
-                OpenFriendPlusMod.LOG.error("OpenFriend connect-to-local failed", t);
+                OpenFriendPlusMod.LOG.error("OpenFriend Plus connect-to-local failed", t);
             }
         });
     }

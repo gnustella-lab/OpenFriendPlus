@@ -1,20 +1,23 @@
 /*
  * OpenFriend — Copyright (c) 2026 ZSHARE. Licensed under the MIT License.
  * Variant for group-b (Minecraft 1.19 - 1.19.4): uses PoseStack + GuiComponent.fill
- * + Font.draw instead of GuiGraphics. Scissor clipping is a no-op here because the
- * 1.19 RenderSystem.enableScissor needs framebuffer coordinates, which would
- * require window-scale conversion; the Friends overlay tolerates this — content
- * outside the modal is hidden by the OVERLAY dim layer.
+ * + Font.draw instead of GuiGraphics. Scissor coordinates are converted from
+ * GUI-scaled coordinates to framebuffer coordinates before RenderSystem calls.
  */
 package dev.gnustella.openfriendplus.mc.ui;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.gnustella.openfriendplus.common.ui.URenderer;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiComponent;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.TextComponent;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 public final class MCRenderer implements URenderer {
 
@@ -23,6 +26,10 @@ public final class MCRenderer implements URenderer {
     private int mouseX;
     private int mouseY;
     private float partialTick;
+    private final Deque<int[]> clipStack = new ArrayDeque<>();
+    private final Deque<int[]> translateStack = new ArrayDeque<>();
+    private int translateX;
+    private int translateY;
 
     public MCRenderer(Font font) {
         this.font = font;
@@ -33,9 +40,21 @@ public final class MCRenderer implements URenderer {
         this.mouseX = mouseX;
         this.mouseY = mouseY;
         this.partialTick = partialTick;
+        this.clipStack.clear();
+        this.translateStack.clear();
+        this.translateX = 0;
+        this.translateY = 0;
     }
 
     public void endFrame() {
+        if (!clipStack.isEmpty()) {
+            RenderSystem.disableScissor();
+            clipStack.clear();
+        }
+        while (poseStack != null && !translateStack.isEmpty()) {
+            poseStack.popPose();
+            translateStack.pop();
+        }
         this.poseStack = null;
     }
 
@@ -118,10 +137,42 @@ public final class MCRenderer implements URenderer {
 
     @Override
     public void pushClip(int x, int y, int width, int height) {
+        if (poseStack == null) return;
+        int x0 = x + translateX;
+        int y0 = y + translateY;
+        int x1 = x0 + Math.max(0, width);
+        int y1 = y0 + Math.max(0, height);
+        if (!clipStack.isEmpty()) {
+            int[] parent = clipStack.peek();
+            x0 = Math.max(x0, parent[0]);
+            y0 = Math.max(y0, parent[1]);
+            x1 = Math.min(x1, parent[2]);
+            y1 = Math.min(y1, parent[3]);
+        }
+        if (x1 < x0) x1 = x0;
+        if (y1 < y0) y1 = y0;
+        int[] clip = new int[] { x0, y0, x1, y1 };
+        clipStack.push(clip);
+        applyClip(clip);
     }
 
     @Override
     public void popClip() {
+        if (clipStack.isEmpty()) return;
+        clipStack.pop();
+        RenderSystem.disableScissor();
+        if (!clipStack.isEmpty()) applyClip(clipStack.peek());
+    }
+
+    private void applyClip(int[] clip) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null) return;
+        double scale = mc.getWindow().getGuiScale();
+        int sx = (int) Math.floor(clip[0] * scale);
+        int sy = (int) Math.floor(mc.getWindow().getHeight() - clip[3] * scale);
+        int sw = (int) Math.ceil((clip[2] - clip[0]) * scale);
+        int sh = (int) Math.ceil((clip[3] - clip[1]) * scale);
+        RenderSystem.enableScissor(sx, sy, Math.max(0, sw), Math.max(0, sh));
     }
 
     @Override
@@ -129,12 +180,23 @@ public final class MCRenderer implements URenderer {
         if (poseStack == null) return;
         poseStack.pushPose();
         poseStack.translate((double) dx, (double) dy, 0d);
+        translateStack.push(new int[] { translateX, translateY });
+        translateX += dx;
+        translateY += dy;
     }
 
     @Override
     public void popTranslate() {
         if (poseStack == null) return;
         poseStack.popPose();
+        if (translateStack.isEmpty()) {
+            translateX = 0;
+            translateY = 0;
+        } else {
+            int[] previous = translateStack.pop();
+            translateX = previous[0];
+            translateY = previous[1];
+        }
     }
 
     @Override

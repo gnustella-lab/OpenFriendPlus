@@ -3,6 +3,10 @@
  */
 package dev.gnustella.openfriendplus.common.screen;
 
+import dev.gnustella.openfriendplus.common.BuildInfo;
+import dev.gnustella.openfriendplus.common.config.OpenFriendPlusConfig;
+import dev.gnustella.openfriendplus.common.i18n.Lang;
+import dev.gnustella.openfriendplus.common.i18n.TranslationKey;
 import dev.gnustella.openfriendplus.common.state.FriendsState;
 import dev.gnustella.openfriendplus.common.ui.UButton;
 import dev.gnustella.openfriendplus.common.ui.UComponent;
@@ -18,8 +22,8 @@ import java.util.List;
 
 public class FriendsOverlayScreen {
 
-    public static final int PANEL_WIDTH  = 320;
-    public static final int PANEL_HEIGHT = 208;
+    public static final int PANEL_WIDTH  = 420;
+    public static final int PANEL_HEIGHT = 300;
     public static final int HEADER_HEIGHT = 22;
     public static final int TABBAR_HEIGHT = 20;
     public static final int MIN_PANEL_W = 240;
@@ -37,6 +41,7 @@ public class FriendsOverlayScreen {
 
     private final FriendsState state;
     private final Runnable onClose;
+    private final OpenFriendPlusConfig config;
 
     private final List<Tab> tabs = new ArrayList<>();
     private final UPanel root = new UPanel();
@@ -51,9 +56,10 @@ public class FriendsOverlayScreen {
     private int activeIndex = 0;
     private UComponent activeBody;
 
-    public FriendsOverlayScreen(FriendsState state, Runnable onClose) {
+    public FriendsOverlayScreen(FriendsState state, Runnable onClose, OpenFriendPlusConfig config) {
         this.state = state;
         this.onClose = onClose;
+        this.config = config == null ? new OpenFriendPlusConfig() : config;
 
         root.setBackground(UPanel.Background.OVERLAY);
         modal.setBackground(UPanel.Background.SURFACE);
@@ -61,7 +67,7 @@ public class FriendsOverlayScreen {
 
         header.setBackground(UPanel.Background.SURFACE_ALT);
 
-        closeBtn = new UButton("✕", () -> {
+        closeBtn = new UButton("X", () -> {
             if (this.onClose != null) this.onClose.run();
         }).setStyle(UButton.Style.GHOST);
 
@@ -150,11 +156,13 @@ public class FriendsOverlayScreen {
         root.render(r);
 
         int titleY = header.getY() + (header.getHeight() - r.textHeight()) / 2;
-        r.drawText(header.getX() + 14, titleY, "Friends", UTheme.TEXT);
+        r.drawText(header.getX() + 14, titleY, Lang.tr(TranslationKey.TITLE, BuildInfo.NAME), UTheme.TEXT);
+        r.drawTextRight(header.getX(), titleY, header.getWidth() - 28, "v" + BuildInfo.VERSION, UTheme.TEXT_DIM);
+        r.drawText(modal.getX() + 10, modal.getY() + modal.getHeight() - r.textHeight() - 5, Lang.tr(TranslationKey.NOTICE_UNOFFICIAL, "Unofficial fork"), UTheme.TEXT_FAINT);
     }
 
     public boolean mouseClick(double mouseX, double mouseY, int button) {
-        if (button == 0 && !modal.containsPoint(mouseX, mouseY)) {
+        if (button == 0 && config.clickOutsideToClose && !modal.containsPoint(mouseX, mouseY)) {
             if (onClose != null) onClose.run();
             return true;
         }

@@ -1,7 +1,7 @@
 /*
  * OpenFriend — Copyright (c) 2026 ZSHARE. Licensed under the MIT License.
  *
- * Adds the OpenFriend "Friends" icon button to TitleScreen, PauseScreen, and
+ * Adds the OpenFriend Plus "Friends" icon button to TitleScreen, PauseScreen, and
  * JoinMultiplayerScreen via Forge's ScreenEvent.Init.Post — independent of
  * the per-MC-version Mixin path that Fabric uses. Forge does not auto-discover
  * mixin configs, so we use the loader-idiomatic event bus instead.
@@ -64,6 +64,19 @@ public final class ForgeScreenHandler {
             OpenFriendPlusToastOverlay.render(event.getGuiGraphics(), sw);
         } catch (Throwable t) {
             OpenFriendPlusMod.LOG.warn("toast overlay (screen) render failed: {}", t.getMessage());
+        }
+    }
+
+    @SubscribeEvent
+    public void onScreenMousePressed(ScreenEvent.MouseButtonPressed.Pre event) {
+        try {
+            Minecraft mc = Minecraft.getInstance();
+            int sw = mc == null ? 320 : mc.getWindow().getGuiScaledWidth();
+            if (OpenFriendPlusToastOverlay.handleClick((int) event.getMouseX(), (int) event.getMouseY(), sw)) {
+                event.setCanceled(true);
+            }
+        } catch (Throwable t) {
+            OpenFriendPlusMod.LOG.warn("toast overlay click handling failed: {}", t.getMessage());
         }
     }
 }

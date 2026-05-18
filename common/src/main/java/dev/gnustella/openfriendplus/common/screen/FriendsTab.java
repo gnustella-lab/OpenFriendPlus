@@ -5,6 +5,10 @@ package dev.gnustella.openfriendplus.common.screen;
 
 import dev.gnustella.openfriendplus.common.model.Friend;
 import dev.gnustella.openfriendplus.common.model.PresenceStatus;
+import dev.gnustella.openfriendplus.common.config.OpenFriendPlusConfig;
+import dev.gnustella.openfriendplus.common.i18n.Lang;
+import dev.gnustella.openfriendplus.common.i18n.TranslationKey;
+import dev.gnustella.openfriendplus.common.privacy.PrivacyFormatter;
 import dev.gnustella.openfriendplus.common.state.FriendsState;
 import dev.gnustella.openfriendplus.common.ui.UButton;
 import dev.gnustella.openfriendplus.common.ui.UComponent;
@@ -25,6 +29,7 @@ public final class FriendsTab implements FriendsOverlayScreen.Tab {
     private final AddFriendTab.Actions addActions;
     private final Runnable onRefresh;
     private final dev.gnustella.openfriendplus.common.notice.NoticeSink notice;
+    private final PrivacyFormatter privacy;
 
     private final UScrollPane scroll = new UScrollPane();
     private final UPanel content = new UPanel().setPadding(0);
@@ -44,12 +49,14 @@ public final class FriendsTab implements FriendsOverlayScreen.Tab {
                       FriendEntry.Actions friendActions,
                       AddFriendTab.Actions addActions,
                       Runnable onRefresh,
-                      dev.gnustella.openfriendplus.common.notice.NoticeSink notice) {
+                      dev.gnustella.openfriendplus.common.notice.NoticeSink notice,
+                      OpenFriendPlusConfig config) {
         this.state = state;
         this.friendActions = friendActions;
         this.addActions = addActions;
         this.onRefresh = onRefresh;
         this.notice = notice == null ? new dev.gnustella.openfriendplus.common.notice.NoticeSink() {} : notice;
+        this.privacy = new PrivacyFormatter(config);
         this.scroll.setContent(content);
         input.setPlaceholder("Enter Profile Name");
         input.setMaxLength(16);
@@ -58,7 +65,7 @@ public final class FriendsTab implements FriendsOverlayScreen.Tab {
     }
 
     @Override public String id()    { return "friends"; }
-    @Override public String label() { return "Friends"; }
+    @Override public String label() { return Lang.tr(TranslationKey.TAB_FRIENDS, "Friends"); }
     @Override public int badge()    { return 0; }
 
     @Override
@@ -82,13 +89,13 @@ public final class FriendsTab implements FriendsOverlayScreen.Tab {
         String q = input.getText() == null ? "" : input.getText().trim();
         if (q.isEmpty()) return;
         addQuery = q;
-        setAddState(AddFriendTab.State.SEARCHING, "Sending request to " + q + "...");
+        setAddState(AddFriendTab.State.SEARCHING, "Sending request to " + privacy.maskName(q) + "...");
         addActions.add(q, err -> {
             setAddState(AddFriendTab.State.IDLE, "");
             if (err == null) {
                 input.setText("");
                 addQuery = "";
-                notice.success("Friend request sent", "Sent request to " + q + ".");
+                notice.success("Friend request sent", "Sent request to " + privacy.maskName(q) + ".");
             }
         });
     }
@@ -112,20 +119,22 @@ public final class FriendsTab implements FriendsOverlayScreen.Tab {
     }
 
     private void rebuildIfNeeded() {
-        int currentCount = state.friends().size();
+        java.util.Map<java.util.UUID, Friend> friendsSnapshot = state.friends();
+        java.util.Set<java.util.UUID> blocksSnapshot = state.blocks();
+        int currentCount = friendsSnapshot.size();
         if (!dirty && currentCount == lastVisibleFriendCount) return;
         dirty = false;
         lastVisibleFriendCount = currentCount;
         content.clearChildren();
 
-        List<Friend> rows = new ArrayList<>(state.friends().values());
+        List<Friend> rows = new ArrayList<>(friendsSnapshot.values());
         rows.sort(Comparator
                 .comparing((Friend f) -> rankOf(state.presenceOf(f.profileId)))
                 .thenComparing(f -> f.name.toLowerCase()));
 
         for (Friend f : rows) {
-            boolean isBlocked = state.blocks().contains(f.profileId);
-            FriendEntry e = new FriendEntry(f, friendActions)
+            boolean isBlocked = blocksSnapshot.contains(f.profileId);
+            FriendEntry e = new FriendEntry(f, friendActions, privacy)
                     .setPresence(state.presenceOf(f.profileId))
                     .setBlocked(isBlocked);
             e.setOnMenuToggle(this::relayoutEntries);
@@ -202,7 +211,7 @@ public final class FriendsTab implements FriendsOverlayScreen.Tab {
 
             if (state.friends().isEmpty() && addState == AddFriendTab.State.IDLE) {
                 int textY = scroll.getY() + scroll.getHeight() / 2 - r.textHeight() / 2;
-                r.drawTextCentered(x, textY, width, "No friends yet -- search by name above.", UTheme.TEXT_DIM);
+                r.drawTextCentered(x, textY, width, Lang.tr("openfriendplus.empty.friends", "No friends yet. Search by gamertag to add someone."), UTheme.TEXT_DIM);
             }
         }
     }

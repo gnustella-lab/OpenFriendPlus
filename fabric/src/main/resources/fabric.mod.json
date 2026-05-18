@@ -12,7 +12,7 @@
     "issues": "https://github.com/gnustella-lab/OpenFriendPlus/issues"
   },
   "license": "MIT",
-  "icon": "assets/openfriendplus/textures/gui/openfriendplus_icon.png",
+  "icon": "assets/openfriendplus/icon.png",
   "environment": "client",
   "entrypoints": {
     "client": ["dev.gnustella.openfriendplus.fabric.OpenFriendPlusFabricClient"]
@@ -24,7 +24,7 @@
   "accessWidener": "openfriendplus.accesswidener",
   "depends": {
     "fabricloader": ">=0.16.0",
-    "minecraft": ">=1.16.5",
+    "minecraft": "${minecraft_version}",
     "java": ">=17"
   }
 }

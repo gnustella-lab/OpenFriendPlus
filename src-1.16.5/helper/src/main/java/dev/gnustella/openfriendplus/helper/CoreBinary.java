@@ -91,6 +91,7 @@ public final class CoreBinary {
     public static String missingBinaryMessage(Path target) {
         return "OpenFriend Core binary is missing at " + target
             + " — expected " + expectedBinaryName()
-            + ". Build the jar with the binaries staged in helper/src/main/resources/openfriend/.";
+            + ". Build the jar with the binaries staged in helper/src/main/resources/openfriend/, "
+            + "or set -Dopenfriendplus.core.path / OPENFRIENDPLUS_CORE to an executable Core binary.";
     }
 }

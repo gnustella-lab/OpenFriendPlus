@@ -4,6 +4,7 @@
 package dev.gnustella.openfriendplus.common.screen;
 
 import dev.gnustella.openfriendplus.common.model.Friend;
+import dev.gnustella.openfriendplus.common.privacy.PrivacyFormatter;
 import dev.gnustella.openfriendplus.common.ui.UButton;
 import dev.gnustella.openfriendplus.common.ui.UComponent;
 import dev.gnustella.openfriendplus.common.ui.URenderer;
@@ -26,13 +27,19 @@ public class PendingEntry extends UComponent {
     private final Friend friend;
     private final Direction direction;
     private final Actions actions;
+    private final PrivacyFormatter privacy;
     private final UButton primary;
     private final UButton secondary;
 
     public PendingEntry(Friend friend, Direction direction, Actions actions) {
+        this(friend, direction, actions, null);
+    }
+
+    public PendingEntry(Friend friend, Direction direction, Actions actions, PrivacyFormatter privacy) {
         this.friend = friend;
         this.direction = direction;
         this.actions = actions == null ? new Actions() {} : actions;
+        this.privacy = privacy;
         if (direction == Direction.INCOMING) {
             this.primary   = new UButton("Accept",  () -> this.actions.onAccept(friend)).setStyle(UButton.Style.PRIMARY);
             this.secondary = new UButton("Decline", () -> this.actions.onDecline(friend)).setStyle(UButton.Style.GHOST);
@@ -65,11 +72,12 @@ public class PendingEntry extends UComponent {
 
         int headY = y + (height - HEAD_SIZE) / 2;
         r.fillRect(x + PAD_X, headY, HEAD_SIZE, HEAD_SIZE, UTheme.SURFACE);
-        r.drawHead(x + PAD_X, headY, HEAD_SIZE, friend.profileId.toString());
+        String headId = privacy != null && privacy.hidesIdentity() ? "" : friend.profileId.toString();
+        r.drawHead(x + PAD_X, headY, HEAD_SIZE, headId);
 
         int textX = x + PAD_X + HEAD_SIZE + 10;
         int textY = y + (height - r.textHeight() * 2 - 2) / 2;
-        r.drawText(textX, textY, friend.name, UTheme.TEXT);
+        r.drawText(textX, textY, displayName(), UTheme.TEXT);
         r.drawText(textX, textY + r.textHeight() + 2, label(), UTheme.TEXT_DIM);
 
         primary.tickHover(r.currentMouseX(), r.currentMouseY());
@@ -84,6 +92,10 @@ public class PendingEntry extends UComponent {
 
     private String label() {
         return direction == Direction.INCOMING ? "Wants to be friends" : "Request sent";
+    }
+
+    private String displayName() {
+        return privacy == null ? friend.name : privacy.maskName(friend.name);
     }
 
     @Override

@@ -5,6 +5,8 @@ package dev.gnustella.openfriendplus.common.screen;
 
 import dev.gnustella.openfriendplus.common.BuildInfo;
 import dev.gnustella.openfriendplus.common.config.OpenFriendPlusConfig;
+import dev.gnustella.openfriendplus.common.i18n.Lang;
+import dev.gnustella.openfriendplus.common.i18n.TranslationKey;
 import dev.gnustella.openfriendplus.common.state.FriendsState;
 import dev.gnustella.openfriendplus.common.ui.UButton;
 import dev.gnustella.openfriendplus.common.ui.UComponent;
@@ -154,9 +156,9 @@ public class FriendsOverlayScreen {
         root.render(r);
 
         int titleY = header.getY() + (header.getHeight() - r.textHeight()) / 2;
-        r.drawText(header.getX() + 14, titleY, BuildInfo.NAME, UTheme.TEXT);
+        r.drawText(header.getX() + 14, titleY, Lang.tr(TranslationKey.TITLE, BuildInfo.NAME), UTheme.TEXT);
         r.drawTextRight(header.getX(), titleY, header.getWidth() - 28, "v" + BuildInfo.VERSION, UTheme.TEXT_DIM);
-        r.drawText(modal.getX() + 10, modal.getY() + modal.getHeight() - r.textHeight() - 5, "Unofficial fork", UTheme.TEXT_FAINT);
+        r.drawText(modal.getX() + 10, modal.getY() + modal.getHeight() - r.textHeight() - 5, Lang.tr(TranslationKey.NOTICE_UNOFFICIAL, "Unofficial fork"), UTheme.TEXT_FAINT);
     }
 
     public boolean mouseClick(double mouseX, double mouseY, int button) {

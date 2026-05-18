@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public final class FriendsState implements IpcListener {
 
@@ -50,20 +51,47 @@ public final class FriendsState implements IpcListener {
     private final HostInfo host = new HostInfo();
     private final JoinInfo join = new JoinInfo();
     private final AuthInfo auth = new AuthInfo();
+    private volatile long lastRefreshAt;
 
     private final List<Runnable> listeners = new ArrayList<>();
     private final Object listenersLock = new Object();
 
-    public Map<UUID, Friend> friends()  { return Collections.unmodifiableMap(friends); }
-    public Map<UUID, Friend> incoming() { return Collections.unmodifiableMap(incoming); }
-    public Map<UUID, Friend> outgoing() { return Collections.unmodifiableMap(outgoing); }
-    public Set<UUID> blocks()           { return Collections.unmodifiableSet(blocks); }
-    public HostInfo host()              { return host; }
-    public JoinInfo join()              { return join; }
-    public AuthInfo auth()              { return auth; }
+    public synchronized Map<UUID, Friend> friends()  { return Collections.unmodifiableMap(new LinkedHashMap<>(friends)); }
+    public synchronized Map<UUID, Friend> incoming() { return Collections.unmodifiableMap(new LinkedHashMap<>(incoming)); }
+    public synchronized Map<UUID, Friend> outgoing() { return Collections.unmodifiableMap(new LinkedHashMap<>(outgoing)); }
+    public synchronized Set<UUID> blocks()           { return Collections.unmodifiableSet(new HashSet<>(blocks)); }
+    public synchronized HostInfo host()              { return copyHost(host); }
+    public synchronized JoinInfo join()              { return copyJoin(join); }
+    public synchronized AuthInfo auth()              { return copyAuth(auth); }
+    public long lastRefreshAt()         { return lastRefreshAt; }
 
-    public PresenceStatus presenceOf(UUID profileId) {
+    public synchronized PresenceStatus presenceOf(UUID profileId) {
         return presence.getOrDefault(profileId, PresenceStatus.UNKNOWN);
+    }
+
+    private static HostInfo copyHost(HostInfo source) {
+        HostInfo copy = new HostInfo();
+        copy.running = source.running;
+        copy.target = source.target;
+        copy.useBypass = source.useBypass;
+        return copy;
+    }
+
+    private static JoinInfo copyJoin(JoinInfo source) {
+        JoinInfo copy = new JoinInfo();
+        copy.running = source.running;
+        copy.peer = source.peer;
+        copy.pmid = source.pmid;
+        copy.listen = source.listen;
+        return copy;
+    }
+
+    private static AuthInfo copyAuth(AuthInfo source) {
+        AuthInfo copy = new AuthInfo();
+        copy.authenticated = source.authenticated;
+        copy.profileId = source.profileId;
+        copy.name = source.name;
+        return copy;
     }
 
     public void addChangeListener(Runnable r) {
@@ -98,9 +126,19 @@ public final class FriendsState implements IpcListener {
         if (changed) fireChange();
     }
 
-    public void primeFromList(IpcClient ipc) {
+    public CompletableFuture<Void> primeFromList(IpcClient ipc) {
+        if (ipc == null || !ipc.isRunning()) {
+            CompletableFuture<Void> failed = new CompletableFuture<>();
+            failed.completeExceptionally(new IllegalStateException("ipc not running"));
+            return failed;
+        }
         java.util.logging.Logger log = java.util.logging.Logger.getLogger("openfriendplus.state");
-        ipc.requestAsync("friends.list", null).whenComplete((r, err) -> {
+        CompletableFuture<com.google.gson.JsonObject> friendsFuture = ipc.requestAsync("friends.list", null);
+        CompletableFuture<com.google.gson.JsonObject> blocksFuture = ipc.requestAsync("blocks.list", null);
+        CompletableFuture<com.google.gson.JsonObject> authFuture = ipc.requestAsync("auth.status", null);
+        CompletableFuture<com.google.gson.JsonObject> hostFuture = ipc.requestAsync("host.status", null);
+
+        friendsFuture.whenComplete((r, err) -> {
             if (err != null) {
                 log.warning("friends.list failed: " + err.getMessage());
             } else if (r != null) {
@@ -109,18 +147,19 @@ public final class FriendsState implements IpcListener {
                 applyFriendsListResult(r);
             }
         });
-        ipc.requestAsync("blocks.list", null).whenComplete((r, err) -> {
+        blocksFuture.whenComplete((r, err) -> {
             if (err != null) log.warning("blocks.list failed: " + err.getMessage());
             else if (r != null) applyBlocksListResult(r);
         });
-        ipc.requestAsync("auth.status", null).whenComplete((r, err) -> {
+        authFuture.whenComplete((r, err) -> {
             if (err != null) log.warning("auth.status failed: " + err.getMessage());
             else if (r != null) applyAuthStatusResult(r);
         });
-        ipc.requestAsync("host.status", null).whenComplete((r, err) -> {
+        hostFuture.whenComplete((r, err) -> {
             if (err != null) log.warning("host.status failed: " + err.getMessage());
             else if (r != null) applyHostStatusResult(r);
         });
+        return CompletableFuture.allOf(friendsFuture, blocksFuture, authFuture, hostFuture);
     }
 
     public void applyFriendsListResult(JsonObject result) {
@@ -131,6 +170,7 @@ public final class FriendsState implements IpcListener {
             consumeFriendArray(result.getAsJsonArray("friends"), friends);
             consumeFriendArray(result.getAsJsonArray("incoming"), incoming);
             consumeFriendArray(result.getAsJsonArray("outgoing"), outgoing);
+            lastRefreshAt = System.currentTimeMillis();
         }
         fireChange();
     }

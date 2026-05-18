@@ -4,7 +4,9 @@
 package dev.gnustella.openfriendplus.mc.toast;
 
 import com.google.gson.JsonObject;
+import dev.gnustella.openfriendplus.common.config.OpenFriendPlusConfig;
 import dev.gnustella.openfriendplus.common.ipc.IpcListener;
+import dev.gnustella.openfriendplus.common.privacy.PrivacyFormatter;
 import dev.gnustella.openfriendplus.mc.OpenFriendPlusMod;
 import dev.gnustella.openfriendplus.mc.ui.SignInScreen;
 import net.minecraft.Util;
@@ -22,11 +24,13 @@ public final class ToastDispatcher implements IpcListener {
         String name = params.has("name") && !params.get("name").isJsonNull()
                 ? params.get("name").getAsString()
                 : "";
+        OpenFriendPlusConfig config = OpenFriendPlusMod.config();
+        PrivacyFormatter privacy = new PrivacyFormatter(config);
         switch (method) {
             case "auth.deviceCode": {
                 String code = params.has("userCode") ? params.get("userCode").getAsString() : "";
                 String uri  = params.has("verificationUri") ? params.get("verificationUri").getAsString() : "";
-                OpenFriendPlusMod.LOG.info("OpenFriend sign-in: visit {} and enter {}", uri, code);
+                OpenFriendPlusMod.LOG.info("OpenFriend Plus sign-in: visit {} and enter {}", uri, privacy.maskDeviceCode(code));
                 mc.execute(() -> {
                     SignInScreen scr = new SignInScreen(uri, code);
                     SignInScreen.setCurrent(scr);
@@ -38,7 +42,7 @@ public final class ToastDispatcher implements IpcListener {
                 break;
             }
             case "auth.signedIn": {
-                final String displayName = name;
+                final String displayName = privacy.maskName(name);
                 mc.execute(() -> {
                     SignInScreen cur = SignInScreen.current();
                     if (cur != null) cur.markSignedIn(displayName);
@@ -54,6 +58,11 @@ public final class ToastDispatcher implements IpcListener {
             case "friend.requestIncoming":
             case "friend.added":
             case "friend.joined": {
+                if (method.equals("friend.joined")) {
+                    if (config != null && !config.showJoinToasts) return;
+                } else {
+                    if (config != null && !config.showRequestToasts) return;
+                }
                 ToastComponent toasts = mc.getToasts();
                 if (toasts == null) return;
                 Component title;
@@ -61,15 +70,15 @@ public final class ToastDispatcher implements IpcListener {
                 if (method.equals("friend.requestIncoming")) {
                     if (name.isEmpty()) return;
                     title = new TextComponent("Friend request");
-                    body  = new TextComponent(name);
+                    body  = new TextComponent(privacy.maskName(name));
                 } else if (method.equals("friend.added")) {
                     if (name.isEmpty()) return;
                     title = new TextComponent("Friend added");
-                    body  = new TextComponent(name);
+                    body  = new TextComponent(privacy.maskName(name));
                 } else {
-                    String peer = params.has("pmid") ? params.get("pmid").getAsString().substring(0, 8) : "Someone";
+                    String peer = params.has("pmid") ? privacy.maskUuid(params.get("pmid").getAsString()) : "Someone";
                     title = new TextComponent("Friend joined");
-                    body  = new TextComponent(peer + "…");
+                    body  = new TextComponent(peer);
                 }
                 toasts.addToast(new FriendsToast(title, body));
                 break;

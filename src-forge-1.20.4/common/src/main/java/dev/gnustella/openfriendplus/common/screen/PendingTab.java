@@ -4,6 +4,10 @@
 package dev.gnustella.openfriendplus.common.screen;
 
 import dev.gnustella.openfriendplus.common.model.Friend;
+import dev.gnustella.openfriendplus.common.config.OpenFriendPlusConfig;
+import dev.gnustella.openfriendplus.common.i18n.Lang;
+import dev.gnustella.openfriendplus.common.i18n.TranslationKey;
+import dev.gnustella.openfriendplus.common.privacy.PrivacyFormatter;
 import dev.gnustella.openfriendplus.common.state.FriendsState;
 import dev.gnustella.openfriendplus.common.ui.UComponent;
 import dev.gnustella.openfriendplus.common.ui.UPanel;
@@ -22,6 +26,7 @@ public final class PendingTab implements FriendsOverlayScreen.Tab {
 
     private final FriendsState state;
     private final PendingEntry.Actions actions;
+    private final PrivacyFormatter privacy;
 
     private final UScrollPane scroll = new UScrollPane();
     private final UPanel content = new UPanel();
@@ -30,14 +35,15 @@ public final class PendingTab implements FriendsOverlayScreen.Tab {
     private final Runnable stateListener = this::markDirty;
     private boolean dirty = true;
 
-    public PendingTab(FriendsState state, PendingEntry.Actions actions) {
+    public PendingTab(FriendsState state, PendingEntry.Actions actions, OpenFriendPlusConfig config) {
         this.state = state;
         this.actions = actions;
+        this.privacy = new PrivacyFormatter(config);
         this.scroll.setContent(content);
     }
 
     @Override public String id()    { return "pending"; }
-    @Override public String label() { return "Requests (" + state.incoming().size() + ")"; }
+    @Override public String label() { return Lang.tr(TranslationKey.TAB_REQUESTS, "Requests") + " (" + state.incoming().size() + ")"; }
     @Override public int badge()    { return 0; }
 
     @Override
@@ -88,7 +94,7 @@ public final class PendingTab implements FriendsOverlayScreen.Tab {
         List<Friend> sorted = new ArrayList<>(friends);
         sorted.sort(Comparator.comparing(f -> f.name.toLowerCase()));
         for (Friend f : sorted) {
-            PendingEntry row = new PendingEntry(f, dir, actions);
+            PendingEntry row = new PendingEntry(f, dir, actions, privacy);
             row.setBounds(content.getX(), y, content.getWidth(), PendingEntry.ROW_HEIGHT);
             content.addChild(row);
             y += PendingEntry.ROW_HEIGHT;
@@ -148,7 +154,7 @@ public final class PendingTab implements FriendsOverlayScreen.Tab {
         public void render(URenderer r) {
             if (!isVisible()) return;
             int textY = y + height / 2 - r.textHeight() / 2;
-            r.drawTextCentered(x, textY, width, "No pending friend requests", UTheme.TEXT_DIM);
+            r.drawTextCentered(x, textY, width, Lang.tr("openfriendplus.empty.requests", "No pending friend requests"), UTheme.TEXT_DIM);
         }
     }
 }

@@ -7,13 +7,13 @@ import dev.gnustella.openfriendplus.mc.OpenFriendPlusMod;
 import dev.gnustella.openfriendplus.mc.ui.OpenFriendPlusToastOverlay;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.toasts.ToastComponent;
+import net.minecraft.client.gui.components.toasts.ToastManager;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(ToastComponent.class)
+@Mixin(ToastManager.class)
 public abstract class GuiMixin {
     @Inject(method = "render", at = @At("TAIL"))
     private void openfriend$renderOurToasts(GuiGraphics graphics, CallbackInfo ci) {
@@ -22,7 +22,7 @@ public abstract class GuiMixin {
             int sw = mc == null ? 320 : mc.getWindow().getGuiScaledWidth();
             OpenFriendPlusToastOverlay.render(graphics, sw);
         } catch (Throwable t) {
-            OpenFriendPlusMod.LOG.error("OpenFriend toast overlay render failed", t);
+            OpenFriendPlusMod.LOG.error("OpenFriend Plus toast overlay render failed", t);
         }
     }
 }
