@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "dev.gnustella.openfriendplus.mc.mixin",
+  "compatibilityLevel": "JAVA_8",
+  "minVersion": "0.8",
+  "refmap": "openfriendplus.refmap.json",
+  "client": [
+    "IntegratedServerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

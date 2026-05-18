@@ -9,7 +9,7 @@ architectury {
 }
 
 loom {
-    accessWidenerPath.set(project(":common-mc").file("src/main/resources/openfriend.accesswidener"))
+    accessWidenerPath.set(project(":common-mc").file("src/main/resources/openfriendplus.accesswidener"))
     forge {
         convertAccessWideners.set(true)
     }
@@ -42,9 +42,9 @@ dependencies {
 tasks.withType<Jar>().configureEach {
     manifest {
         attributes(
-            "Implementation-Title"   to "OpenFriend",
+            "Implementation-Title"   to "OpenFriend Plus",
             "Implementation-Version" to project.version,
-            "Implementation-Vendor"  to "ZSHARE"
+            "Implementation-Vendor"  to "gnustella-lab"
         )
     }
 }
