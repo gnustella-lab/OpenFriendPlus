@@ -4,6 +4,10 @@
 package dev.gnustella.openfriendplus.common.screen;
 
 import dev.gnustella.openfriendplus.common.model.Friend;
+import dev.gnustella.openfriendplus.common.config.OpenFriendPlusConfig;
+import dev.gnustella.openfriendplus.common.i18n.Lang;
+import dev.gnustella.openfriendplus.common.i18n.TranslationKey;
+import dev.gnustella.openfriendplus.common.privacy.PrivacyFormatter;
 import dev.gnustella.openfriendplus.common.state.FriendsState;
 import dev.gnustella.openfriendplus.common.ui.UButton;
 import dev.gnustella.openfriendplus.common.ui.UComponent;
@@ -25,6 +29,7 @@ public final class BlocksTab implements FriendsOverlayScreen.Tab {
 
     private final FriendsState state;
     private final Actions actions;
+    private final PrivacyFormatter privacy;
 
     private final UScrollPane scroll = new UScrollPane();
     private final UPanel content = new UPanel();
@@ -33,14 +38,15 @@ public final class BlocksTab implements FriendsOverlayScreen.Tab {
     private final Runnable stateListener = this::markDirty;
     private boolean dirty = true;
 
-    public BlocksTab(FriendsState state, Actions actions) {
+    public BlocksTab(FriendsState state, Actions actions, OpenFriendPlusConfig config) {
         this.state = state;
         this.actions = actions;
+        this.privacy = new PrivacyFormatter(config);
         this.scroll.setContent(content);
     }
 
     @Override public String id()    { return "blocks"; }
-    @Override public String label() { return "Blocked"; }
+    @Override public String label() { return Lang.tr(TranslationKey.TAB_BLOCKED, "Blocked"); }
     @Override public int badge()    { return state.blocks().size(); }
 
     @Override
@@ -69,7 +75,7 @@ public final class BlocksTab implements FriendsOverlayScreen.Tab {
 
         int y = content.getY();
         for (UUID id : ids) {
-            BlockEntry row = new BlockEntry(id, nameFor(id), actions);
+            BlockEntry row = new BlockEntry(id, nameFor(id), actions, privacy);
             row.setBounds(content.getX(), y, content.getWidth(), BlockEntry.ROW_HEIGHT);
             content.addChild(row);
             y += BlockEntry.ROW_HEIGHT;
@@ -114,11 +120,13 @@ public final class BlocksTab implements FriendsOverlayScreen.Tab {
 
         private final UUID profileId;
         private final String name;
+        private final PrivacyFormatter privacy;
         private final UButton unblockBtn;
 
-        BlockEntry(UUID profileId, String name, Actions actions) {
+        BlockEntry(UUID profileId, String name, Actions actions, PrivacyFormatter privacy) {
             this.profileId = profileId;
             this.name = name;
+            this.privacy = privacy;
             this.unblockBtn = new UButton("Unblock", () -> actions.unblock(profileId)).setStyle(UButton.Style.SUBTLE);
         }
 
@@ -134,7 +142,7 @@ public final class BlocksTab implements FriendsOverlayScreen.Tab {
             if (!visible) return;
             if (hovered) r.fillRect(x, y, width, height, UTheme.SURFACE_ALT);
             int textY = y + (height - r.textHeight()) / 2;
-            r.drawText(x + PAD_X, textY, name, UTheme.TEXT);
+            r.drawText(x + PAD_X, textY, privacy == null ? name : privacy.maskName(name), UTheme.TEXT);
             unblockBtn.tickHover(r.currentMouseX(), r.currentMouseY());
             unblockBtn.render(r);
             r.fillRect(x + PAD_X, y + height - 1, width - PAD_X * 2, 1, UTheme.BORDER);
@@ -158,7 +166,7 @@ public final class BlocksTab implements FriendsOverlayScreen.Tab {
         public void render(URenderer r) {
             if (!isVisible()) return;
             int textY = y + height / 2 - r.textHeight() / 2;
-            r.drawTextCentered(x, textY, width, "No blocked users.", UTheme.TEXT_DIM);
+            r.drawTextCentered(x, textY, width, Lang.tr("openfriendplus.empty.blocks", "No blocked users."), UTheme.TEXT_DIM);
         }
     }
 }

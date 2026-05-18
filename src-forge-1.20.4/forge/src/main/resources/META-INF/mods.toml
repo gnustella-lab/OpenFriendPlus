@@ -1,5 +1,5 @@
 modLoader = "javafml"
-loaderVersion = "[47,)"
+loaderVersion = "[49,)"
 license = "MIT"
 issueTrackerURL = "https://github.com/gnustella-lab/OpenFriendPlus/issues"
 
@@ -11,19 +11,21 @@ modId = "openfriendplus"
 version = "${file.jarVersion}"
 displayName = "OpenFriend Plus"
 displayURL = "https://modrinth.com/mod/openfriend-plus"
+logoFile = "assets/openfriendplus/icon.png"
+credits = "Based on OpenFriendMod by ZSHARE"
 authors = "gnustella-lab"
 description = "Unofficial enhanced fork of OpenFriendMod with improved UX, privacy options, diagnostics, translations, and modpack-friendly defaults."
 
 [[dependencies.openfriendplus]]
 modId = "forge"
 mandatory = true
-versionRange = "[47,)"
+versionRange = "[49,)"
 ordering = "NONE"
 side = "CLIENT"
 
 [[dependencies.openfriendplus]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.17.1,)"
+versionRange = "[1.20.4,1.20.5)"
 ordering = "NONE"
 side = "CLIENT"

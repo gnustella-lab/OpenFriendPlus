@@ -25,7 +25,7 @@ public abstract class IntegratedServerMixin {
             MCScreenOpener opener = OpenFriendPlusMod.opener();
             if (opener != null) opener.onServerPublished(actualPort);
         } catch (Throwable t) {
-            OpenFriendPlusMod.LOG.error("OpenFriend publish hook failed", t);
+            OpenFriendPlusMod.LOG.error("OpenFriend Plus publish hook failed", t);
         }
     }
 }

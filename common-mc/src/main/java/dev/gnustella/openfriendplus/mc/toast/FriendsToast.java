@@ -7,7 +7,7 @@ import dev.gnustella.openfriendplus.common.ui.UTheme;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.toasts.Toast;
-import net.minecraft.client.gui.components.toasts.ToastComponent;
+import net.minecraft.client.gui.components.toasts.ToastManager;
 import net.minecraft.network.chat.Component;
 
 public final class FriendsToast implements Toast {
@@ -18,6 +18,7 @@ public final class FriendsToast implements Toast {
 
     private final Component title;
     private final Component message;
+    private Visibility visibility = Visibility.SHOW;
 
     public FriendsToast(Component title, Component message) {
         this.title = title;
@@ -31,7 +32,17 @@ public final class FriendsToast implements Toast {
     public int height() { return HEIGHT; }
 
     @Override
-    public Visibility render(GuiGraphics g, ToastComponent host, long elapsedMs) {
+    public Visibility getWantedVisibility() {
+        return visibility;
+    }
+
+    @Override
+    public void update(ToastManager manager, long elapsedMs) {
+        visibility = elapsedMs >= TTL_MS ? Visibility.HIDE : Visibility.SHOW;
+    }
+
+    @Override
+    public void render(GuiGraphics g, Font font, long elapsedMs) {
         int border = UTheme.ACCENT_BLUE;
         g.fill(0, 0, WIDTH, HEIGHT, UTheme.TOAST_BG);
         g.fill(0, 0, WIDTH, 1, border);
@@ -39,10 +50,7 @@ public final class FriendsToast implements Toast {
         g.fill(0, 0, 1, HEIGHT, border);
         g.fill(WIDTH - 1, 0, WIDTH, HEIGHT, border);
 
-        Font font = host.getMinecraft().font;
         g.drawString(font, title,   8, 6,             UTheme.TEXT,        false);
         g.drawString(font, message, 8, 6 + font.lineHeight + 2, UTheme.ACCENT_CYAN, false);
-
-        return elapsedMs >= TTL_MS ? Visibility.HIDE : Visibility.SHOW;
     }
 }

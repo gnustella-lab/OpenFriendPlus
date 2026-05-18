@@ -1,0 +1,16 @@
+.gradle/
+build/
+**/.gradle/
+**/build/
+
+run/
+runs/
+logs/
+*.log
+*.tmp
+*.class
+
+.idea/
+*.iml
+.vscode/
+.DS_Store

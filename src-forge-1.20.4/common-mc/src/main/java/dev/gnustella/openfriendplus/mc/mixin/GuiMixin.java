@@ -22,7 +22,7 @@ public abstract class GuiMixin {
             int sw = mc == null ? 320 : mc.getWindow().getGuiScaledWidth();
             OpenFriendPlusToastOverlay.render(graphics, sw);
         } catch (Throwable t) {
-            OpenFriendPlusMod.LOG.error("OpenFriend toast overlay render failed", t);
+            OpenFriendPlusMod.LOG.error("OpenFriend Plus toast overlay render failed", t);
         }
     }
 }

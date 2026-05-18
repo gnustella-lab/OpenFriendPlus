@@ -1,6 +1,6 @@
 # OpenFriend Plus
 
-OpenFriend Plus is an **unofficial enhanced fork of OpenFriendMod**. It is not affiliated with, endorsed by, sponsored by, or officially connected to ZSHARE, zerozshare, Microsoft, Mojang, Xbox, Minecraft, or Modrinth.
+OpenFriend Plus is an **unofficial enhanced fork of OpenFriendMod**. It is not affiliated with, endorsed by, sponsored by, or connected to ZSHARE, zerozshare, Microsoft, Mojang, Xbox, Minecraft, or Modrinth.
 
 The fork keeps the original idea of bringing a Friends List-style flow to Minecraft versions that do not have it, while adding quality-of-life features for players, streamers, modpacks, and pack maintainers.
 
@@ -44,13 +44,18 @@ Use this software only with accounts you own and servers/worlds you operate or h
 
 - OpenFriend Plus is client-side.
 - Do not install it as a required server mod unless a loader-specific build explicitly documents server support.
+- Fabric builds do not require Fabric API unless a future optional integration explicitly documents it.
 - The default config is created under the OpenFriend Plus data directory as `config.json`.
+- Pack defaults can be shipped as `config/openfriendplus-defaults.json` or `config/openfriendplus.json`; the mod imports those only when its local config does not already exist.
 - The default local join address is `127.0.0.1:25577` and can be changed in the Settings tab.
+- `randomizeJoinPort`, toast toggles, `quietFirstBoot`, and language settings are available for pack defaults.
 - The fork is designed to avoid conflicts with the original mod by using a separate mod id, package, assets namespace, mixin names, access widener name, and data directory.
 
 ## Build notes
 
 The repository contains Fabric-oriented root modules and legacy/version-specific source trees. The root `buildAll` task currently targets the included Fabric module to avoid depending on Forge/NeoForge modules that are not included in root settings.
+
+The bundled Core binary keeps the original OpenFriend Core resource path and binary names (`openfriend-*`). This is intentional for the first OpenFriend Plus release because the Core itself has not been rebranded or forked here.
 
 ## License and credits
 

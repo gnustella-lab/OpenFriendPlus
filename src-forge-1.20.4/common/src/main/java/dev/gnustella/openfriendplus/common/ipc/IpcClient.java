@@ -43,6 +43,9 @@ public final class IpcClient {
     private volatile boolean running;
     private volatile Thread readerThread;
     private volatile Thread stderrThread;
+    private volatile long startedAt;
+    private volatile String lastError = "";
+    private volatile String lastStderrLine = "";
 
     public IpcClient(Supplier<Process> processFactory, Consumer<String> stderrSink) {
         this.processFactory = processFactory;
@@ -61,6 +64,7 @@ public final class IpcClient {
         this.process = p;
         this.stdin = new BufferedWriter(new OutputStreamWriter(p.getOutputStream(), StandardCharsets.UTF_8));
         this.running = true;
+        this.startedAt = System.currentTimeMillis();
         this.readerThread = new Thread(this::runReader, "openfriendplus-ipc-reader");
         this.readerThread.setDaemon(true);
         this.readerThread.start();
@@ -94,6 +98,11 @@ public final class IpcClient {
         Process p = process;
         return running && p != null && p.isAlive();
     }
+
+    public int getPendingCount() { return pending.size(); }
+    public long getStartedAt() { return startedAt; }
+    public String getLastError() { return lastError; }
+    public String getLastStderrLine() { return lastStderrLine; }
 
     public CompletableFuture<JsonObject> requestAsync(String method, JsonObject params) {
         if (!isRunning()) {
@@ -194,6 +203,7 @@ public final class IpcClient {
         try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getErrorStream(), StandardCharsets.UTF_8))) {
             String line;
             while ((line = br.readLine()) != null) {
+                lastStderrLine = line;
                 stderrSink.accept(line);
             }
         } catch (IOException ignored) {}
@@ -205,6 +215,7 @@ public final class IpcClient {
         try {
             parsed = new JsonParser().parse(line);
         } catch (Exception e) {
+            lastError = "ipc: bad json";
             stderrSink.accept("ipc: bad json: " + line);
             return;
         }
@@ -224,6 +235,7 @@ public final class IpcClient {
                     String dataStr = d.isJsonPrimitive() ? d.getAsString() : d.toString();
                     if (!dataStr.isEmpty()) msg = msg + ": " + dataStr;
                 }
+                lastError = msg;
                 fut.completeExceptionally(new IpcException(msg, code));
                 return;
             }
@@ -246,6 +258,7 @@ public final class IpcClient {
                 try {
                     l.onNotification(method, params);
                 } catch (Throwable t) {
+                    lastError = "ipc: listener threw: " + t;
                     stderrSink.accept("ipc: listener threw: " + t);
                 }
             }

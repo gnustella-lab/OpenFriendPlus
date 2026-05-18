@@ -7,13 +7,19 @@ package dev.gnustella.openfriendplus.common.screen;
 import com.google.gson.JsonObject;
 import dev.gnustella.openfriendplus.common.config.OpenFriendPlusConfig;
 import dev.gnustella.openfriendplus.common.config.OpenFriendPlusConfigStore;
+import dev.gnustella.openfriendplus.common.config.LocalPortPicker;
 import dev.gnustella.openfriendplus.common.diagnostics.DiagnosticsState;
 import dev.gnustella.openfriendplus.common.ipc.IpcClient;
 import dev.gnustella.openfriendplus.common.ipc.IpcException;
 import dev.gnustella.openfriendplus.common.model.Friend;
 import dev.gnustella.openfriendplus.common.notice.NoticeSink;
+import dev.gnustella.openfriendplus.common.privacy.PrivacyFormatter;
 import dev.gnustella.openfriendplus.common.state.FriendsState;
 
+import java.awt.Desktop;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.concurrent.CompletionException;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -34,9 +40,18 @@ public final class FriendsController {
     private final OpenFriendPlusConfig config;
     private final OpenFriendPlusConfigStore configStore;
     private final DiagnosticsState diagnostics;
+    private final PrivacyFormatter privacy;
     private long lastRefreshAt = 0;
     private long nextAllowedRefreshAt = 0;
     private int consecutiveRefreshErrors = 0;
+    private String lastJoinListenAddress;
+
+    public FriendsController(IpcClient ipc, FriendsState state,
+                             JoinLauncher joinLauncher,
+                             MultiplayBridge multiplay,
+                             NoticeSink notice) {
+        this(ipc, state, joinLauncher, multiplay, notice, new OpenFriendPlusConfig(), null, null);
+    }
 
     public FriendsController(IpcClient ipc, FriendsState state,
                              JoinLauncher joinLauncher,
@@ -53,26 +68,42 @@ public final class FriendsController {
         this.config = config == null ? new OpenFriendPlusConfig() : config;
         this.configStore = configStore;
         this.diagnostics = diagnostics;
+        this.privacy = new PrivacyFormatter(this.config);
+        this.lastJoinListenAddress = this.config.resolveJoinListenAddress();
     }
 
     public NoticeSink notice() { return notice; }
     public IpcClient ipc() { return ipc; }
     public FriendsState state() { return state; }
+    public synchronized String localJoinListenAddress() { return lastJoinListenAddress; }
 
     public synchronized void refreshIfStale() {
-        ipc.requestAsync("presence.set", IpcClient.params("status", "ONLINE"));
-        long now = System.currentTimeMillis();
-        if (now < nextAllowedRefreshAt) return;
-        long interval = Math.max(15_000L, config.effectiveRefreshIntervalSeconds() * 1000L);
-        if (now - lastRefreshAt < interval) return;
-        lastRefreshAt = now;
-        state.primeFromList(ipc);
-        consecutiveRefreshErrors = 0;
+        refresh(false);
     }
 
     public synchronized void forceRefresh() {
-        lastRefreshAt = 0;
-        refreshIfStale();
+        refresh(true);
+    }
+
+    private synchronized void refresh(boolean force) {
+        if (ipc == null || !ipc.isRunning()) return;
+        if (!force && !config.autoRefreshFriends) return;
+        long now = System.currentTimeMillis();
+        if (now < nextAllowedRefreshAt) {
+            if (force) {
+                long waitSeconds = Math.max(1L, (nextAllowedRefreshAt - now + 999L) / 1000L);
+                notice.warn("Refresh delayed", "Rate-limit backoff active for " + waitSeconds + "s.");
+            }
+            return;
+        }
+        long interval = Math.max(15_000L, config.effectiveRefreshIntervalSeconds() * 1000L);
+        if (!force && now - lastRefreshAt < interval) return;
+        lastRefreshAt = now;
+        ipc.requestAsync("presence.set", IpcClient.params("status", "ONLINE"));
+        state.primeFromList(ipc).whenComplete((ignored, err) -> {
+            if (err == null) backoffRefresh(null);
+            else backoffRefresh(unwrap(err));
+        });
     }
 
     private synchronized void backoffRefresh(Throwable err) {
@@ -93,13 +124,13 @@ public final class FriendsController {
         boolean showMultiplay = multiplay != null && multiplay.canHost();
         java.util.List<FriendsOverlayScreen.Tab> tabs = new java.util.ArrayList<>();
         if (showMultiplay) tabs.add(new MultiplayTab(state, multiplayActions()));
-        tabs.add(new FriendsTab(state, friendActions(), addActions(), this::refreshIfStale, notice));
-        tabs.add(new PendingTab(state, pendingActions()));
-        tabs.add(new BlocksTab(state, blocksActions()));
+        tabs.add(new FriendsTab(state, friendActions(), addActions(), this::refreshIfStale, notice, config));
+        tabs.add(new PendingTab(state, pendingActions(), config));
+        tabs.add(new BlocksTab(state, blocksActions(), config));
         if (config.diagnosticsOverlay && diagnostics != null) {
             tabs.add(new DiagnosticsTab(diagnostics, this::forceRefresh, this::restartCore, this::stopCore, notice));
         }
-        if (configStore != null) tabs.add(new SettingsTab(config, configStore, notice));
+        if (configStore != null) tabs.add(new SettingsTab(config, configStore, notice, settingsActions()));
         overlay.setTabs(tabs.toArray(new FriendsOverlayScreen.Tab[0]));
         return overlay;
     }
@@ -111,38 +142,70 @@ public final class FriendsController {
 
     private void stopCore() {
         try {
-            ipc.stop();
+            if (ipc != null) ipc.stop();
             notice.success("Core stopped", "OpenFriend Plus Core bridge was stopped.");
         } catch (Throwable t) {
             notice.error("Could not stop Core", t.getMessage());
         }
     }
 
+    private SettingsTab.Actions settingsActions() {
+        return new SettingsTab.Actions() {
+            @Override public void openDataFolder() {
+                if (configStore == null) return;
+                try {
+                    Path dir = configStore.dataDir();
+                    java.nio.file.Files.createDirectories(dir);
+                    if (!Desktop.isDesktopSupported()) throw new IOException("Desktop API is not available.");
+                    Desktop.getDesktop().open(dir.toFile());
+                    notice.success("Data folder opened", dir.toString());
+                } catch (Throwable t) {
+                    notice.error("Could not open data folder", t.getMessage());
+                }
+            }
+
+            @Override public void clearLocalAuthAndCache() {
+                if (configStore == null) return;
+                try {
+                    stopCore();
+                    configStore.clearLocalAuthAndCache();
+                    notice.success("Local data cleared", "Auth/cache data was removed. Restart Minecraft before signing in again.");
+                } catch (Throwable t) {
+                    notice.error("Could not clear local data", t.getMessage());
+                }
+            }
+        };
+    }
+
     private FriendEntry.Actions friendActions() {
         return new FriendEntry.Actions() {
             @Override public void onJoin(Friend f) {
-                String listen = config.resolveJoinListenAddress();
+                String listen = resolveJoinListenAddress();
                 JsonObject params = IpcClient.params("name", f.name, "listen", listen);
                 ipc.requestAsync("join.start", params).whenComplete((result, err) -> {
                     if (err != null) {
                         boolean alreadyRunning = err instanceof IpcException && ((IpcException) err).isAlreadyRunning();
                         if (alreadyRunning) {
-                            if (joinLauncher != null) joinLauncher.connectToLocalAddress(listen);
+                            String runningListen = state.join().listen == null || state.join().listen.isEmpty() ? listen : state.join().listen;
+                            if (joinLauncher != null) joinLauncher.connectToLocalAddress(runningListen);
                             return;
                         }
                         backoffRefresh(err);
                         java.util.logging.Logger.getLogger("openfriendplus.join")
-                                .warning("join.start failed for " + f.name + ": " + err.getMessage());
+                                .warning("join.start failed for " + privacy.maskName(f.name) + ": " + err.getMessage());
                         String msg = err.getMessage() == null ? "Unknown error" : err.getMessage();
                         if (msg.contains("429") || msg.toLowerCase().contains("rate limited")) {
                             notice.warn("Mojang rate limit", "Please wait a moment before retrying.");
                         } else {
-                            notice.error("Could not join " + f.name, msg);
+                            notice.error("Could not join " + privacy.maskName(f.name), msg);
                         }
                         return;
                     }
                     String addr = result != null && result.has("listen") ? result.get("listen").getAsString() : listen;
-                    if (config.showJoinToasts) notice.success("Joining friend", f.name);
+                    synchronized (FriendsController.this) {
+                        lastJoinListenAddress = addr;
+                    }
+                    if (config.showJoinToasts) notice.success("Joining friend", privacy.maskName(f.name));
                     if (joinLauncher != null) joinLauncher.connectToLocalAddress(addr);
                 });
             }
@@ -151,7 +214,7 @@ public final class FriendsController {
                 ipc.requestAsync("friends.remove", IpcClient.params("profileId", f.profileId.toString()))
                    .whenComplete((r, err) -> {
                         if (err == null) {
-                            notice.success("Friend removed", f.name);
+                            notice.success("Friend removed", privacy.maskName(f.name));
                             forceRefresh();
                         } else {
                             notice.error("Could not remove friend", err.getMessage());
@@ -162,8 +225,8 @@ public final class FriendsController {
             @Override public void onBlock(Friend f) {
                 ipc.requestAsync("blocks.add", IpcClient.params("profileId", f.profileId.toString(), "name", f.name))
                    .whenComplete((r, err) -> {
-                        if (err == null) notice.success("Player blocked", f.name);
-                        else notice.error("Could not block " + f.name, err.getMessage());
+                        if (err == null) notice.success("Player blocked", privacy.maskName(f.name));
+                        else notice.error("Could not block " + privacy.maskName(f.name), err.getMessage());
                         refreshBlocks();
                    });
             }
@@ -171,8 +234,8 @@ public final class FriendsController {
             @Override public void onUnblock(Friend f) {
                 ipc.requestAsync("blocks.remove", IpcClient.params("profileId", f.profileId.toString()))
                    .whenComplete((r, err) -> {
-                        if (err == null) notice.success("Player unblocked", f.name);
-                        else notice.error("Could not unblock " + f.name, err.getMessage());
+                        if (err == null) notice.success("Player unblocked", privacy.maskName(f.name));
+                        else notice.error("Could not unblock " + privacy.maskName(f.name), err.getMessage());
                         refreshBlocks();
                    });
             }
@@ -199,7 +262,7 @@ public final class FriendsController {
            .whenComplete((r, err) -> {
                 if (err == null) {
                     state.removePending(f.profileId);
-                    notice.success(okTitle, f.name);
+                    notice.success(okTitle, privacy.maskName(f.name));
                     forceRefresh();
                 } else {
                     notice.error(errTitle, err.getMessage());
@@ -220,7 +283,7 @@ public final class FriendsController {
                     else {
                         String msg = err.getMessage();
                         if (msg == null || msg.isEmpty()) msg = "Could not send request.";
-                        notice.error("Friend request to " + name + " failed", msg);
+                        notice.error("Friend request to " + privacy.maskName(name) + " failed", msg);
                     }
                     cb.accept(err);
                 });
@@ -257,11 +320,34 @@ public final class FriendsController {
         return profileId -> ipc.requestAsync("blocks.remove", IpcClient.params("profileId", profileId.toString()))
                 .whenComplete((r, err) -> {
                     if (err == null) {
-                        notice.success("Player unblocked", profileId.toString().substring(0, 8));
+                        notice.success("Player unblocked", privacy.maskUuid(profileId).substring(0, Math.min(8, privacy.maskUuid(profileId).length())));
                         refreshBlocks();
                     } else {
                         notice.error("Could not unblock", err.getMessage());
                     }
                 });
+    }
+
+    private synchronized String resolveJoinListenAddress() {
+        if (state.join().running && state.join().listen != null && !state.join().listen.isEmpty()) {
+            lastJoinListenAddress = state.join().listen;
+            return lastJoinListenAddress;
+        }
+
+        int configuredPort = config.effectiveLocalJoinPort();
+        int selectedPort = configuredPort;
+        if (config.randomizeJoinPort) {
+            selectedPort = LocalPortPicker.findFreePort();
+        } else if (!LocalPortPicker.isPortAvailable(configuredPort)) {
+            selectedPort = LocalPortPicker.findFreePort();
+            notice.warn("Join port in use", "Using fallback port " + selectedPort + " for this join.");
+        }
+        lastJoinListenAddress = "127.0.0.1:" + selectedPort;
+        return lastJoinListenAddress;
+    }
+
+    private static Throwable unwrap(Throwable err) {
+        if (err instanceof CompletionException && err.getCause() != null) return err.getCause();
+        return err;
     }
 }

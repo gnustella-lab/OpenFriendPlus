@@ -74,7 +74,7 @@ public final class AddFriendTab implements FriendsOverlayScreen.Tab {
             return;
         }
         lastQuery = query;
-        setState(State.SEARCHING, "Searching " + query + "…");
+        setState(State.SEARCHING, "Searching " + query + "...");
         actions.search(query, this::onSearchResult);
     }
 
@@ -97,7 +97,7 @@ public final class AddFriendTab implements FriendsOverlayScreen.Tab {
     private void triggerAdd() {
         if (state != State.FOUND || lastQuery.isEmpty()) return;
         String target = lastQuery;
-        setState(State.SEARCHING, "Sending request to " + target + "…");
+        setState(State.SEARCHING, "Sending request to " + target + "...");
         actions.add(target, err -> {
             if (err == null) {
                 setState(State.SENT, "Request sent to " + target + ".");
@@ -108,7 +108,7 @@ public final class AddFriendTab implements FriendsOverlayScreen.Tab {
                 if (msg == null || msg.isEmpty()) {
                     msg = "Could not send request to " + target + ".";
                 } else if (msg.length() > 60) {
-                    msg = "Request rejected — click the notification for details.";
+                    msg = "Request rejected -- click the notification for details.";
                 }
                 setState(State.ERROR, msg);
             }

@@ -28,14 +28,14 @@ public final class MCScreenOpener implements FriendsController.MultiplayBridge, 
         Minecraft mc = Minecraft.getInstance();
         if (mc == null) return;
         if (controller == null) {
-            OpenFriendPlusMod.LOG.warn("OpenFriend overlay requested but controller not initialised");
+            OpenFriendPlusMod.LOG.warn("OpenFriend Plus overlay requested but controller not initialised");
             return;
         }
         try {
             FriendsOverlayScreen overlay = controller.buildOverlay(() -> mc.setScreen(null));
             mc.setScreen(new MCScreenWrapper(overlay));
         } catch (Throwable t) {
-            OpenFriendPlusMod.LOG.error("OpenFriend overlay open failed", t);
+            OpenFriendPlusMod.LOG.error("OpenFriend Plus overlay open failed", t);
         }
     }
 
@@ -73,13 +73,13 @@ public final class MCScreenOpener implements FriendsController.MultiplayBridge, 
         mc.setScreen(null);
         boolean ok = mc.getSingleplayerServer().publishServer(gameType, allowCheats, port);
         if (ok) {
-            sendChat(Component.literal("[OpenFriend] ")
+            sendChat(Component.literal("[OpenFriend Plus] ")
                     .withStyle(ChatFormatting.AQUA)
                     .append(Component.literal("Opened to LAN on port " + port + " (max " + maxPlayers + "). Bridging to your Friends list...")
                             .withStyle(ChatFormatting.WHITE)));
             onServerPublished(port);
         } else {
-            sendChat(Component.literal("[OpenFriend] Failed to open to LAN (port " + port + ")")
+            sendChat(Component.literal("[OpenFriend Plus] Failed to open to LAN (port " + port + ")")
                     .withStyle(ChatFormatting.RED));
         }
         return ok;
@@ -88,30 +88,30 @@ public final class MCScreenOpener implements FriendsController.MultiplayBridge, 
     private volatile int lastBridgedPort = -1;
 
     public void onServerPublished(int port) {
-        OpenFriendPlusMod.LOG.info("OpenFriend.onServerPublished(port={}) controller={} ipc={} running={}",
+        OpenFriendPlusMod.LOG.info("OpenFriend Plus onServerPublished(port={}) controller={} ipc={} running={}",
                 port,
                 controller != null,
                 controller != null && controller.ipc() != null,
                 controller != null && controller.ipc() != null && controller.ipc().isRunning());
         if (controller == null || controller.ipc() == null || !controller.ipc().isRunning()) return;
         if (lastBridgedPort == port) {
-            OpenFriendPlusMod.LOG.info("OpenFriend.onServerPublished: skipping duplicate for port {}", port);
+            OpenFriendPlusMod.LOG.info("OpenFriend Plus onServerPublished: skipping duplicate for port {}", port);
             return;
         }
         lastBridgedPort = port;
         String target = "127.0.0.1:" + port;
-        OpenFriendPlusMod.LOG.info("OpenFriend: sending host.start ipc target={}", target);
+        OpenFriendPlusMod.LOG.info("OpenFriend Plus: sending host.start ipc target={}", target);
         controller.ipc().requestAsync("host.start",
                 IpcClient.params("target", target, "useBypass", false))
                 .whenComplete((res, err) -> {
                     if (err != null) {
-                        OpenFriendPlusMod.LOG.warn("OpenFriend: host.start failed: {}", err.getMessage());
+                        OpenFriendPlusMod.LOG.warn("OpenFriend Plus: host.start failed: {}", err.getMessage());
                         OpenFriendPlusToastOverlay.push(
                                 dev.gnustella.openfriendplus.common.notice.NoticeSink.Level.ERROR,
                                 "Bridge failed",
                                 err.getMessage() == null ? "Unknown error" : err.getMessage());
                     } else {
-                        OpenFriendPlusMod.LOG.info("OpenFriend: host.start ok, response={}", res);
+                        OpenFriendPlusMod.LOG.info("OpenFriend Plus: host.start ok, response={}", res);
                         OpenFriendPlusToastOverlay.push(
                                 dev.gnustella.openfriendplus.common.notice.NoticeSink.Level.SUCCESS,
                                 "World shared",
@@ -138,10 +138,10 @@ public final class MCScreenOpener implements FriendsController.MultiplayBridge, 
             try {
                 mc.setScreen(null);
                 ServerAddress addr = ServerAddress.parseString(hostPort);
-                ServerData data = new ServerData("OpenFriend join", hostPort, ServerData.Type.OTHER);
+                ServerData data = new ServerData("OpenFriend Plus join", hostPort, ServerData.Type.OTHER);
                 ConnectScreen.startConnecting(null, mc, addr, data, false, null);
             } catch (Throwable t) {
-                OpenFriendPlusMod.LOG.error("OpenFriend connect-to-local failed", t);
+                OpenFriendPlusMod.LOG.error("OpenFriend Plus connect-to-local failed", t);
             }
         });
     }

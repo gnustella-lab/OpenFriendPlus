@@ -9,6 +9,7 @@ import dev.gnustella.openfriendplus.common.ui.UTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.resources.PlayerSkin;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
@@ -178,8 +179,8 @@ public final class MCRenderer implements URenderer {
             return;
         }
 
-        graphics.blit(tex, x, y, size, size, 8f,  8f, 8, 8, 64, 64);
-        graphics.blit(tex, x, y, size, size, 40f, 8f, 8, 8, 64, 64);
+        graphics.blit(RenderType::guiTextured, tex, x, y, 8f, 8f, size, size, 64, 64);
+        graphics.blit(RenderType::guiTextured, tex, x, y, 40f, 8f, size, size, 64, 64);
     }
 
     @Override

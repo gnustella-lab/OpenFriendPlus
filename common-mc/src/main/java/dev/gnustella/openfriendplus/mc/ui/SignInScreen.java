@@ -3,7 +3,9 @@
  */
 package dev.gnustella.openfriendplus.mc.ui;
 
+import dev.gnustella.openfriendplus.common.privacy.PrivacyFormatter;
 import dev.gnustella.openfriendplus.common.ui.UTheme;
+import dev.gnustella.openfriendplus.mc.OpenFriendPlusMod;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -95,8 +97,9 @@ public final class SignInScreen extends Screen {
         int codeLabelY = instrY + this.font.lineHeight * 2 + 14;
         g.drawCenteredString(this.font, "2. Enter this code:", this.width / 2, codeLabelY, UTheme.TEXT_DIM);
 
+        String displayCode = new PrivacyFormatter(OpenFriendPlusMod.config()).maskDeviceCode(userCode);
         int codeY = codeLabelY + this.font.lineHeight + 12;
-        int codeW = this.font.width(userCode) * 2;
+        int codeW = this.font.width(displayCode) * 2;
         int codeBoxX1 = this.width / 2 - codeW / 2 - 10;
         int codeBoxX2 = this.width / 2 + codeW / 2 + 10;
         g.fill(codeBoxX1, codeY - 4, codeBoxX2, codeY + this.font.lineHeight * 2 + 4, UTheme.BG);
@@ -104,7 +107,7 @@ public final class SignInScreen extends Screen {
         g.pose().translate(this.width / 2f, codeY + this.font.lineHeight, 0);
         g.pose().scale(2.0f, 2.0f, 1.0f);
         g.pose().translate(-this.width / 2f, -(codeY + this.font.lineHeight), 0);
-        g.drawCenteredString(this.font, userCode, this.width / 2, codeY, UTheme.ACCENT_CYAN);
+        g.drawCenteredString(this.font, displayCode, this.width / 2, codeY, UTheme.ACCENT_CYAN);
         g.pose().popPose();
 
         int statusY = my + PANEL_HEIGHT - 40;
@@ -113,6 +116,7 @@ public final class SignInScreen extends Screen {
         } else {
             g.drawCenteredString(this.font, "Waiting for sign-in...", this.width / 2, statusY, UTheme.TEXT_DIM);
         }
+        g.drawCenteredString(this.font, "Never share this code on stream.", this.width / 2, statusY + this.font.lineHeight + 2, UTheme.WARN);
     }
 
     @Override

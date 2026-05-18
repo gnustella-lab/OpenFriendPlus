@@ -8,6 +8,7 @@ import dev.gnustella.openfriendplus.common.BuildInfo;
 import dev.gnustella.openfriendplus.common.config.OpenFriendPlusConfig;
 import dev.gnustella.openfriendplus.common.config.OpenFriendPlusConfigStore;
 import dev.gnustella.openfriendplus.common.diagnostics.DiagnosticsState;
+import dev.gnustella.openfriendplus.common.i18n.Lang;
 import dev.gnustella.openfriendplus.common.ipc.IpcClient;
 import dev.gnustella.openfriendplus.common.privacy.PrivacyFormatter;
 import dev.gnustella.openfriendplus.common.screen.FriendsController;
@@ -45,6 +46,7 @@ public final class OpenFriendPlusMod {
     public static MCScreenOpener opener()        { return opener; }
     public static OpenFriendPlusConfig config()   { return config; }
     public static DiagnosticsState diagnostics()  { return diagnostics; }
+    public static OpenFriendPlusConfigStore configStore() { return configStore; }
 
     private static UUID resolveProfileId(User user) {
         if (user == null) return null;
@@ -81,7 +83,7 @@ public final class OpenFriendPlusMod {
                     s.primeFromList(ipc);
                     probeFriendsList(ipc);
                     ipc.requestAsync("presence.set", IpcClient.params("status", "ONLINE"));
-                    ipc.requestAsync("presence.watch", IpcClient.params("intervalSeconds", 60));
+                    ipc.requestAsync("presence.watch", IpcClient.params("intervalSeconds", config.effectiveRefreshIntervalSeconds()));
                 } else {
                     LOG.warn("OpenFriend Plus: Core rejected Minecraft session ({}); falling back to device-code", err.getMessage());
                     triggerDeviceCodeSignIn(ipc, s, profileId);
@@ -116,7 +118,7 @@ public final class OpenFriendPlusMod {
                 s.primeFromList(ipc);
                 probeFriendsList(ipc);
                 ipc.requestAsync("presence.set", IpcClient.params("status", "ONLINE"));
-                ipc.requestAsync("presence.watch", IpcClient.params("intervalSeconds", 60));
+                ipc.requestAsync("presence.watch", IpcClient.params("intervalSeconds", config.effectiveRefreshIntervalSeconds()));
             } else {
                 LOG.warn("OpenFriend Plus sign-in did not complete: {}", err.getMessage());
             }
@@ -131,6 +133,7 @@ public final class OpenFriendPlusMod {
         java.nio.file.Path dataDir = CoreLauncher.defaultDataDir(MOD_ID);
         OpenFriendPlusConfigStore cfgStore = new OpenFriendPlusConfigStore(dataDir);
         OpenFriendPlusConfig cfg = cfgStore.load();
+        Lang.configure(cfg.language);
         OpenFriendPlusMod.config = cfg;
         OpenFriendPlusMod.configStore = cfgStore;
 
@@ -164,6 +167,7 @@ public final class OpenFriendPlusMod {
                     com.google.gson.JsonObject attrs = params.getAsJsonObject("attrs");
                     if (attrs.size() > 0) detail = detail + " " + attrs.toString();
                 }
+                detail = sanitizeCoreLog(detail);
                 switch (level) {
                     case "ERROR": LOG.error("core: {}", detail); break;
                     case "WARN":  LOG.warn ("core: {}", detail); break;
@@ -181,7 +185,10 @@ public final class OpenFriendPlusMod {
                 handOffMinecraftSessionOrSignIn(ipc, s);
             }
 
-            DiagnosticsState diag = new DiagnosticsState(ipc, s, cfgStore, dataDir);
+            DiagnosticsState diag = new DiagnosticsState(ipc, s, cfgStore, dataDir, launcher.resolveBinaryPath(),
+                    () -> OpenFriendPlusMod.controller == null
+                            ? cfg.resolveJoinListenAddress()
+                            : OpenFriendPlusMod.controller.localJoinListenAddress());
             OpenFriendPlusMod.diagnostics = diag;
             FriendsController fc = new FriendsController(ipc, s, so::connectToLocalAddress, so, so, cfg, cfgStore, diag);
             so.setController(fc);
@@ -196,5 +203,15 @@ public final class OpenFriendPlusMod {
         } catch (Throwable t) {
             LOG.error("OpenFriend Core bridge unavailable; UI will open in offline mode", t);
         }
+    }
+
+    private static String sanitizeCoreLog(String detail) {
+        if (detail == null) return "";
+        String lower = detail.toLowerCase(java.util.Locale.ROOT);
+        if (lower.contains("access_token") || lower.contains("refresh_token")
+                || lower.contains("accesstoken") || lower.contains("refreshtoken")) {
+            return "[redacted token-related core log]";
+        }
+        return detail;
     }
 }

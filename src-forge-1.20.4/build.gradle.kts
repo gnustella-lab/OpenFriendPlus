@@ -29,6 +29,16 @@ subprojects {
         options.release.set(javaRelease)
     }
 
+    tasks.withType<Jar> {
+        manifest {
+            attributes(
+                "Implementation-Title" to rootProject.property("mod_name").toString(),
+                "Implementation-Version" to rootProject.property("mod_version").toString(),
+                "Implementation-Vendor" to "gnustella-lab"
+            )
+        }
+    }
+
     if (name == "helper" || name == "common") {
         repositories { mavenCentral() }
         return@subprojects
@@ -46,7 +56,7 @@ subprojects {
 }
 
 tasks.register("buildAll") {
-    dependsOn(":fabric:build")
+    dependsOn(":forge:build")
     doLast {
         println("=== OpenFriend Plus mod loaders built ===")
     }
@@ -55,10 +65,10 @@ tasks.register("buildAll") {
 
 tasks.register("printBuildInfo") {
     doLast {
-        println("mod_name=${property("mod_name")}")
-        println("mod_id=${property("mod_id")}")
-        println("mod_version=${property("mod_version")}")
-        println("minecraft_version=${property("minecraft_version")}")
-        println("loaders=fabric")
+        println("mod_name=${project.property("mod_name")}")
+        println("mod_id=${project.property("mod_id")}")
+        println("mod_version=${project.property("mod_version")}")
+        println("minecraft_version=${project.property("minecraft_version")}")
+        println("loaders=forge")
     }
 }

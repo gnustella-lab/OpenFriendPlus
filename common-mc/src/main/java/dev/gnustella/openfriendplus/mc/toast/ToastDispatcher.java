@@ -4,12 +4,14 @@
 package dev.gnustella.openfriendplus.mc.toast;
 
 import com.google.gson.JsonObject;
+import dev.gnustella.openfriendplus.common.config.OpenFriendPlusConfig;
 import dev.gnustella.openfriendplus.common.ipc.IpcListener;
+import dev.gnustella.openfriendplus.common.privacy.PrivacyFormatter;
 import dev.gnustella.openfriendplus.mc.OpenFriendPlusMod;
 import dev.gnustella.openfriendplus.mc.ui.SignInScreen;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.toasts.ToastComponent;
+import net.minecraft.client.gui.components.toasts.ToastManager;
 import net.minecraft.network.chat.Component;
 
 public final class ToastDispatcher implements IpcListener {
@@ -21,11 +23,13 @@ public final class ToastDispatcher implements IpcListener {
         String name = params.has("name") && !params.get("name").isJsonNull()
                 ? params.get("name").getAsString()
                 : "";
+        OpenFriendPlusConfig config = OpenFriendPlusMod.config();
+        PrivacyFormatter privacy = new PrivacyFormatter(config);
         switch (method) {
             case "auth.deviceCode": {
                 String code = params.has("userCode") ? params.get("userCode").getAsString() : "";
                 String uri  = params.has("verificationUri") ? params.get("verificationUri").getAsString() : "";
-                OpenFriendPlusMod.LOG.info("OpenFriend sign-in: visit {} and enter {}", uri, code);
+                OpenFriendPlusMod.LOG.info("OpenFriend Plus sign-in: visit {} and enter {}", uri, privacy.maskDeviceCode(code));
                 mc.execute(() -> {
                     SignInScreen scr = new SignInScreen(uri, code);
                     SignInScreen.setCurrent(scr);
@@ -37,7 +41,7 @@ public final class ToastDispatcher implements IpcListener {
                 break;
             }
             case "auth.signedIn": {
-                final String displayName = name;
+                final String displayName = privacy.maskName(name);
                 mc.execute(() -> {
                     SignInScreen cur = SignInScreen.current();
                     if (cur != null) cur.markSignedIn(displayName);
@@ -50,20 +54,25 @@ public final class ToastDispatcher implements IpcListener {
             case "friend.requestIncoming":
             case "friend.added":
             case "friend.joined": {
+                if (method.equals("friend.joined")) {
+                    if (config != null && !config.showJoinToasts) return;
+                } else {
+                    if (config != null && !config.showRequestToasts) return;
+                }
                 Component title;
                 Component body;
                 if (method.equals("friend.requestIncoming")) {
                     if (name.isEmpty()) return;
                     title = Component.literal("Friend request");
-                    body  = Component.literal(name);
+                    body  = Component.literal(privacy.maskName(name));
                 } else if (method.equals("friend.added")) {
                     if (name.isEmpty()) return;
                     title = Component.literal("Friend added");
-                    body  = Component.literal(name);
+                    body  = Component.literal(privacy.maskName(name));
                 } else {
-                    String peer = params.has("pmid") ? params.get("pmid").getAsString().substring(0, 8) : "Someone";
+                    String peer = params.has("pmid") ? privacy.maskUuid(params.get("pmid").getAsString()) : "Someone";
                     title = Component.literal("Friend joined");
-                    body  = Component.literal(peer + "...");
+                    body  = Component.literal(peer);
                 }
                 deferAddToast(mc, new FriendsToast(title, body));
                 break;
@@ -80,7 +89,7 @@ public final class ToastDispatcher implements IpcListener {
                 attempts++;
             }
             mc.execute(() -> {
-                ToastComponent toasts = mc.getToasts();
+                ToastManager toasts = mc.getToastManager();
                 if (toasts != null) toasts.addToast(toast);
             });
         }, "openfriend-toast-defer");

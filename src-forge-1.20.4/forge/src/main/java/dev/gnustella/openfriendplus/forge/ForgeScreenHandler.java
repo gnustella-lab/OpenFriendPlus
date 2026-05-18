@@ -1,7 +1,7 @@
 /*
  * OpenFriend — Copyright (c) 2026 ZSHARE. Licensed under the MIT License.
  *
- * Adds the OpenFriend "Friends" icon button to TitleScreen, PauseScreen, and
+ * Adds the OpenFriend Plus "Friends" icon button to TitleScreen, PauseScreen, and
  * JoinMultiplayerScreen via Forge's ScreenEvent.Init.Post — independent of
  * the per-MC-version Mixin path that Fabric uses. Forge does not auto-discover
  * mixin configs, so we use the loader-idiomatic event bus instead.

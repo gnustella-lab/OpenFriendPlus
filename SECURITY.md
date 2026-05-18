@@ -17,6 +17,8 @@ Do not share:
 
 The fork adds streamer/privacy formatting and diagnostics that avoid intentionally exposing tokens.
 
+The Settings tab includes local data controls. Clearing local auth/cache stops the Core bridge and removes OpenFriend Plus data-directory contents while preserving the mod config file.
+
 ## Reporting issues
 
 Please report security or privacy issues through the fork issue tracker:

@@ -28,7 +28,7 @@ public final class MCScreenWrapper extends Screen {
             this.renderer = new MCRenderer(this.font);
             overlay.layout(this.width, this.height);
         } catch (Throwable t) {
-            OpenFriendPlusMod.LOG.error("OpenFriend overlay init failed", t);
+            OpenFriendPlusMod.LOG.error("OpenFriend Plus overlay init failed", t);
             this.renderFault = true;
         }
     }
@@ -39,7 +39,7 @@ public final class MCScreenWrapper extends Screen {
             super.resize(mc, w, h);
             overlay.layout(w, h);
         } catch (Throwable t) {
-            OpenFriendPlusMod.LOG.error("OpenFriend overlay resize failed", t);
+            OpenFriendPlusMod.LOG.error("OpenFriend Plus overlay resize failed", t);
         }
     }
 
@@ -54,7 +54,7 @@ public final class MCScreenWrapper extends Screen {
         try {
             overlay.render(renderer);
         } catch (Throwable t) {
-            OpenFriendPlusMod.LOG.error("OpenFriend overlay render failed", t);
+            OpenFriendPlusMod.LOG.error("OpenFriend Plus overlay render failed", t);
             renderFault = true;
         } finally {
             renderer.endFrame();
@@ -64,7 +64,7 @@ public final class MCScreenWrapper extends Screen {
 
     private void renderFallback(GuiGraphics g) {
         g.fill(0, 0, this.width, this.height, dev.gnustella.openfriendplus.common.ui.UTheme.DIM_OVERLAY);
-        g.drawCenteredString(this.font, Component.literal("OpenFriend overlay error — see logs"),
+        g.drawCenteredString(this.font, Component.literal("OpenFriend Plus overlay error — see logs"),
                 this.width / 2, this.height / 2 - this.font.lineHeight, dev.gnustella.openfriendplus.common.ui.UTheme.DANGER);
         g.drawCenteredString(this.font, Component.literal("Press Esc to close"),
                 this.width / 2, this.height / 2 + 4, dev.gnustella.openfriendplus.common.ui.UTheme.TOAST_CLOSE);
@@ -78,7 +78,7 @@ public final class MCScreenWrapper extends Screen {
             if (OpenFriendPlusToastOverlay.handleClick((int) mouseX, (int) mouseY, sw)) return true;
             if (overlay.mouseClick(mouseX, mouseY, button)) return true;
         } catch (Throwable t) {
-            OpenFriendPlusMod.LOG.error("OpenFriend overlay mouseClick failed", t);
+            OpenFriendPlusMod.LOG.error("OpenFriend Plus overlay mouseClick failed", t);
             renderFault = true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
@@ -90,7 +90,7 @@ public final class MCScreenWrapper extends Screen {
         try {
             if (overlay.mouseRelease(mouseX, mouseY, button)) return true;
         } catch (Throwable t) {
-            OpenFriendPlusMod.LOG.error("OpenFriend overlay mouseRelease failed", t);
+            OpenFriendPlusMod.LOG.error("OpenFriend Plus overlay mouseRelease failed", t);
             renderFault = true;
         }
         return super.mouseReleased(mouseX, mouseY, button);
@@ -102,7 +102,7 @@ public final class MCScreenWrapper extends Screen {
         try {
             if (overlay.mouseScroll(mouseX, mouseY, scrollY)) return true;
         } catch (Throwable t) {
-            OpenFriendPlusMod.LOG.error("OpenFriend overlay mouseScroll failed", t);
+            OpenFriendPlusMod.LOG.error("OpenFriend Plus overlay mouseScroll failed", t);
             renderFault = true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
@@ -119,7 +119,7 @@ public final class MCScreenWrapper extends Screen {
             if (OpenFriendPlusToastOverlay.handleKey(keyCode)) return true;
             if (overlay.keyPress(keyCode, scanCode, modifiers)) return true;
         } catch (Throwable t) {
-            OpenFriendPlusMod.LOG.error("OpenFriend overlay keyPress failed", t);
+            OpenFriendPlusMod.LOG.error("OpenFriend Plus overlay keyPress failed", t);
             renderFault = true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
@@ -131,7 +131,7 @@ public final class MCScreenWrapper extends Screen {
         try {
             if (overlay.charTyped(ch, modifiers)) return true;
         } catch (Throwable t) {
-            OpenFriendPlusMod.LOG.error("OpenFriend overlay charTyped failed", t);
+            OpenFriendPlusMod.LOG.error("OpenFriend Plus overlay charTyped failed", t);
             renderFault = true;
         }
         return super.charTyped(ch, modifiers);
