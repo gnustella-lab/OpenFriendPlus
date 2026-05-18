@@ -6,3 +6,8 @@ Build them yourself from the OpenFriendCore repo and place them here:
   openfriend-linux-arm64
   openfriend-windows-amd64.exe
 See https://github.com/zerozshare/OpenFriendCore
+
+For local development without bundling, point the launcher at an executable with:
+  -Dopenfriendplus.core.path=/path/to/openfriend-...
+or:
+  OPENFRIENDPLUS_CORE=/path/to/openfriend-...

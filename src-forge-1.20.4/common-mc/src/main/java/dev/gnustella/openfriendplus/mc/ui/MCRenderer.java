@@ -14,6 +14,8 @@ import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.UUID;
 
 public final class MCRenderer implements URenderer {
@@ -23,7 +25,10 @@ public final class MCRenderer implements URenderer {
     private int mouseX;
     private int mouseY;
     private float partialTick;
-    private int clipDepth;
+    private final Deque<int[]> clipStack = new ArrayDeque<>();
+    private final Deque<int[]> translateStack = new ArrayDeque<>();
+    private int translateX;
+    private int translateY;
 
     public MCRenderer(Font font) {
         this.font = font;
@@ -34,13 +39,20 @@ public final class MCRenderer implements URenderer {
         this.mouseX = mouseX;
         this.mouseY = mouseY;
         this.partialTick = partialTick;
-        this.clipDepth = 0;
+        this.clipStack.clear();
+        this.translateStack.clear();
+        this.translateX = 0;
+        this.translateY = 0;
     }
 
     public void endFrame() {
-        while (clipDepth > 0 && graphics != null) {
+        if (graphics != null && !clipStack.isEmpty()) {
             graphics.disableScissor();
-            clipDepth--;
+            clipStack.clear();
+        }
+        while (graphics != null && !translateStack.isEmpty()) {
+            graphics.pose().popPose();
+            translateStack.pop();
         }
         graphics = null;
     }
@@ -127,17 +139,34 @@ public final class MCRenderer implements URenderer {
     @Override
     public void pushClip(int x, int y, int width, int height) {
         if (graphics == null) return;
-        int x1 = Math.max(x, x + width);
-        int y1 = Math.max(y, y + height);
-        graphics.enableScissor(x, y, x1, y1);
-        clipDepth++;
+        int x0 = x + translateX;
+        int y0 = y + translateY;
+        int x1 = x0 + Math.max(0, width);
+        int y1 = y0 + Math.max(0, height);
+        if (!clipStack.isEmpty()) {
+            int[] parent = clipStack.peek();
+            x0 = Math.max(x0, parent[0]);
+            y0 = Math.max(y0, parent[1]);
+            x1 = Math.min(x1, parent[2]);
+            y1 = Math.min(y1, parent[3]);
+        }
+        if (x1 < x0) x1 = x0;
+        if (y1 < y0) y1 = y0;
+        int[] clip = new int[] { x0, y0, x1, y1 };
+        clipStack.push(clip);
+        applyClip(clip);
     }
 
     @Override
     public void popClip() {
-        if (graphics == null || clipDepth == 0) return;
+        if (graphics == null || clipStack.isEmpty()) return;
+        clipStack.pop();
         graphics.disableScissor();
-        clipDepth--;
+        if (!clipStack.isEmpty()) applyClip(clipStack.peek());
+    }
+
+    private void applyClip(int[] clip) {
+        graphics.enableScissor(clip[0], clip[1], clip[2], clip[3]);
     }
 
     @Override
@@ -145,12 +174,23 @@ public final class MCRenderer implements URenderer {
         if (graphics == null) return;
         graphics.pose().pushPose();
         graphics.pose().translate((float) dx, (float) dy, 0f);
+        translateStack.push(new int[] { translateX, translateY });
+        translateX += dx;
+        translateY += dy;
     }
 
     @Override
     public void popTranslate() {
         if (graphics == null) return;
         graphics.pose().popPose();
+        if (translateStack.isEmpty()) {
+            translateX = 0;
+            translateY = 0;
+        } else {
+            int[] previous = translateStack.pop();
+            translateX = previous[0];
+            translateY = previous[1];
+        }
     }
 
     @Override

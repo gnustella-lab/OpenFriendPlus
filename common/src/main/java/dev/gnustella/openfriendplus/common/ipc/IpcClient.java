@@ -75,11 +75,14 @@ public final class IpcClient {
 
     public synchronized void stop() {
         if (!running) return;
-        running = false;
         try {
-            CompletableFuture<JsonObject> f = requestAsync("quit", null);
-            try { f.get(500, TimeUnit.MILLISECONDS); } catch (Exception ignored) {}
+            Process p = process;
+            if (p != null && p.isAlive()) {
+                CompletableFuture<JsonObject> f = requestAsync("quit", null);
+                try { f.get(500, TimeUnit.MILLISECONDS); } catch (Exception ignored) {}
+            }
         } catch (Exception ignored) {}
+        running = false;
         try {
             if (process != null && process.isAlive()) {
                 if (!process.waitFor(1, TimeUnit.SECONDS)) process.destroy();

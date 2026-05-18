@@ -1,0 +1,53 @@
+OpenFriend Plus - compatibilidade dos .jar gerados
+
+Jars para instalar na pasta mods:
+
+1. fabric/build/libs/fabric-1.0.0-fabric.jar
+   Loader: Fabric
+   Minecraft: 1.21.4
+   Java: 21 ou superior
+   Encaixe nas opcoes: Apenas cliente
+   Mundo de um jogador: Tambem funciona em mundos de um jogador
+   Servidor: nao instalar como mod de servidor; nao e "Cliente e servidor" nem "Requerido em ambos"
+
+2. src-1.16.5/fabric/build/libs/fabric-1.0.0-fabric.jar
+   Loader: Fabric
+   Minecraft: 1.16.5
+   Java: 8 ou superior
+   Encaixe nas opcoes: Apenas cliente
+   Mundo de um jogador: Tambem funciona em mundos de um jogador
+   Servidor: nao instalar como mod de servidor; nao e "Cliente e servidor" nem "Requerido em ambos"
+
+3. src-forge-1.20.4/forge/build/libs/forge-1.0.0-forge.jar
+   Loader: Forge
+   Minecraft: 1.20.4
+   Java: 17 ou superior
+   Encaixe nas opcoes: Apenas cliente
+   Mundo de um jogador: Tambem funciona em mundos de um jogador
+   Servidor: nao instalar como mod de servidor; nao e "Cliente e servidor" nem "Requerido em ambos"
+
+Jars que NAO devem ser instalados diretamente:
+
+- common/build/libs/common-1.0.0.jar
+- common-mc/build/libs/common-mc-*.jar
+- helper/build/libs/helper-1.0.0.jar
+- src-1.16.5/common/build/libs/common-1.0.0.jar
+- src-1.16.5/common-mc/build/libs/common-mc-*.jar
+- src-1.16.5/helper/build/libs/helper-1.0.0.jar
+- src-forge-1.20.4/common/build/libs/common-1.0.0.jar
+- src-forge-1.20.4/common-mc/build/libs/common-mc-*.jar
+- src-forge-1.20.4/helper/build/libs/helper-1.0.0.jar
+- src-forge-1.20.4/forge/build/libs/forge-1.0.0-dev-shadow.jar
+- src-1.16.5/build/libs/openfriend-plus-1.0.0.jar
+- src-forge-1.20.4/build/libs/openfriend-plus-1.0.0.jar
+
+Observacao:
+Os jars "common", "common-mc", "helper", "transformProduction*" e "dev-shadow"
+sao artefatos internos do Gradle. Use somente os jars listados em "Jars para instalar".
+
+Resumo das opcoes aplicaveis:
+- Todos os jars instalaveis acima: Apenas cliente.
+- Todos tambem funcionam em mundos de um jogador.
+- Nenhum deles se encaixa como Apenas servidores, Apenas servidores dedicados,
+  Cliente e servidor, Requerido em ambos, Opcional no cliente, Opcional no
+  servidor, Opcional em ambos ou Apenas um jogador.

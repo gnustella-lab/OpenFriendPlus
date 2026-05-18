@@ -66,4 +66,17 @@ public final class ForgeScreenHandler {
             OpenFriendPlusMod.LOG.warn("toast overlay (screen) render failed: {}", t.getMessage());
         }
     }
+
+    @SubscribeEvent
+    public void onScreenMousePressed(ScreenEvent.MouseButtonPressed.Pre event) {
+        try {
+            Minecraft mc = Minecraft.getInstance();
+            int sw = mc == null ? 320 : mc.getWindow().getGuiScaledWidth();
+            if (OpenFriendPlusToastOverlay.handleClick((int) event.getMouseX(), (int) event.getMouseY(), sw)) {
+                event.setCanceled(true);
+            }
+        } catch (Throwable t) {
+            OpenFriendPlusMod.LOG.warn("toast overlay click handling failed: {}", t.getMessage());
+        }
+    }
 }

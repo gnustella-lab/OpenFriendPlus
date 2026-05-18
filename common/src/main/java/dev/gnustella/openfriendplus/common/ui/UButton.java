@@ -67,6 +67,7 @@ public class UButton extends UComponent {
     public boolean mouseClick(double mouseX, double mouseY, int button) {
         if (!visible || !enabled || button != 0) return false;
         if (!containsPoint(mouseX, mouseY)) return false;
+        UInput.clearFocus();
         pressed = true;
         if (onClick != null) onClick.run();
         return true;

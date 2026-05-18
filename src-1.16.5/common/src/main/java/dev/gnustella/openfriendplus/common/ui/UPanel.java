@@ -77,6 +77,7 @@ public class UPanel extends UComponent {
             UComponent c = children.get(i);
             if (c.isVisible() && c.mouseClick(mouseX, mouseY, button)) return true;
         }
+        if (button == 0) UInput.clearFocus();
         return false;
     }
 

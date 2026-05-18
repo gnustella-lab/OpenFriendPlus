@@ -119,19 +119,21 @@ public final class FriendsTab implements FriendsOverlayScreen.Tab {
     }
 
     private void rebuildIfNeeded() {
-        int currentCount = state.friends().size();
+        java.util.Map<java.util.UUID, Friend> friendsSnapshot = state.friends();
+        java.util.Set<java.util.UUID> blocksSnapshot = state.blocks();
+        int currentCount = friendsSnapshot.size();
         if (!dirty && currentCount == lastVisibleFriendCount) return;
         dirty = false;
         lastVisibleFriendCount = currentCount;
         content.clearChildren();
 
-        List<Friend> rows = new ArrayList<>(state.friends().values());
+        List<Friend> rows = new ArrayList<>(friendsSnapshot.values());
         rows.sort(Comparator
                 .comparing((Friend f) -> rankOf(state.presenceOf(f.profileId)))
                 .thenComparing(f -> f.name.toLowerCase()));
 
         for (Friend f : rows) {
-            boolean isBlocked = state.blocks().contains(f.profileId);
+            boolean isBlocked = blocksSnapshot.contains(f.profileId);
             FriendEntry e = new FriendEntry(f, friendActions, privacy)
                     .setPresence(state.presenceOf(f.profileId))
                     .setBlocked(isBlocked);

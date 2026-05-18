@@ -29,12 +29,24 @@ public final class CoreLauncher {
 
     public Path ensureBinary() throws IOException {
         Files.createDirectories(dataDir);
+        Path configured = configuredBinaryPath();
+        if (configured != null) {
+            if (Files.isExecutable(configured)) return configured;
+            throw new IOException("Configured OpenFriend Core binary is not executable: " + configured);
+        }
         Path target = resolveBinaryPath();
         if (!CoreBinary.extractBundled(resourceLoader, CoreBinary.expectedBinaryName(), target)) {
             if (Files.isExecutable(target)) return target;
             throw new IOException(CoreBinary.missingBinaryMessage(target));
         }
         return target;
+    }
+
+    private static Path configuredBinaryPath() {
+        String explicit = System.getProperty("openfriendplus.core.path");
+        if (explicit == null || explicit.trim().isEmpty()) explicit = System.getenv("OPENFRIENDPLUS_CORE");
+        if (explicit == null || explicit.trim().isEmpty()) return null;
+        return Paths.get(explicit.trim());
     }
 
     public Process spawnIpc() throws IOException {

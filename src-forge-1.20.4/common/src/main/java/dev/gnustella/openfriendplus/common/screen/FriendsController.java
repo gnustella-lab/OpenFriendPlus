@@ -186,7 +186,8 @@ public final class FriendsController {
                     if (err != null) {
                         boolean alreadyRunning = err instanceof IpcException && ((IpcException) err).isAlreadyRunning();
                         if (alreadyRunning) {
-                            String runningListen = state.join().listen == null || state.join().listen.isEmpty() ? listen : state.join().listen;
+                            FriendsState.JoinInfo join = state.join();
+                            String runningListen = join.listen == null || join.listen.isEmpty() ? listen : join.listen;
                             if (joinLauncher != null) joinLauncher.connectToLocalAddress(runningListen);
                             return;
                         }
@@ -329,8 +330,9 @@ public final class FriendsController {
     }
 
     private synchronized String resolveJoinListenAddress() {
-        if (state.join().running && state.join().listen != null && !state.join().listen.isEmpty()) {
-            lastJoinListenAddress = state.join().listen;
+        FriendsState.JoinInfo join = state.join();
+        if (join.running && join.listen != null && !join.listen.isEmpty()) {
+            lastJoinListenAddress = join.listen;
             return lastJoinListenAddress;
         }
 

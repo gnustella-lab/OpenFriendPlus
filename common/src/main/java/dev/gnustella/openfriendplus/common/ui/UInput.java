@@ -16,6 +16,8 @@ public class UInput extends UComponent {
     public static final int KEY_ENTER     = 257;
     public static final int KEY_ESCAPE    = 256;
 
+    private static UInput focusedInput;
+
     private StringBuilder text = new StringBuilder();
     private int cursor;
     private int maxLength = 16;
@@ -45,12 +47,20 @@ public class UInput extends UComponent {
     public int getMaxLength()     { return maxLength; }
 
     public void focus() {
+        if (focusedInput != null && focusedInput != this) focusedInput.focused = false;
+        focusedInput = this;
         focused = true;
         blinkAnchorMs = System.currentTimeMillis();
     }
 
     public void blur() {
         focused = false;
+        if (focusedInput == this) focusedInput = null;
+    }
+
+    public static void clearFocus() {
+        UInput current = focusedInput;
+        if (current != null) current.blur();
     }
 
     @Override
@@ -98,8 +108,8 @@ public class UInput extends UComponent {
     public boolean mouseClick(double mouseX, double mouseY, int button) {
         if (!visible || !enabled) return false;
         boolean inside = containsPoint(mouseX, mouseY);
-        focused = inside;
-        if (inside) blinkAnchorMs = System.currentTimeMillis();
+        if (inside) focus();
+        else if (focusedInput == this) blur();
         return inside;
     }
 

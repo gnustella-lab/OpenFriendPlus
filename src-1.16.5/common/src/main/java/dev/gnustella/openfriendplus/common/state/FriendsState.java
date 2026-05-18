@@ -56,17 +56,42 @@ public final class FriendsState implements IpcListener {
     private final List<Runnable> listeners = new ArrayList<>();
     private final Object listenersLock = new Object();
 
-    public Map<UUID, Friend> friends()  { return Collections.unmodifiableMap(friends); }
-    public Map<UUID, Friend> incoming() { return Collections.unmodifiableMap(incoming); }
-    public Map<UUID, Friend> outgoing() { return Collections.unmodifiableMap(outgoing); }
-    public Set<UUID> blocks()           { return Collections.unmodifiableSet(blocks); }
-    public HostInfo host()              { return host; }
-    public JoinInfo join()              { return join; }
-    public AuthInfo auth()              { return auth; }
+    public synchronized Map<UUID, Friend> friends()  { return Collections.unmodifiableMap(new LinkedHashMap<>(friends)); }
+    public synchronized Map<UUID, Friend> incoming() { return Collections.unmodifiableMap(new LinkedHashMap<>(incoming)); }
+    public synchronized Map<UUID, Friend> outgoing() { return Collections.unmodifiableMap(new LinkedHashMap<>(outgoing)); }
+    public synchronized Set<UUID> blocks()           { return Collections.unmodifiableSet(new HashSet<>(blocks)); }
+    public synchronized HostInfo host()              { return copyHost(host); }
+    public synchronized JoinInfo join()              { return copyJoin(join); }
+    public synchronized AuthInfo auth()              { return copyAuth(auth); }
     public long lastRefreshAt()         { return lastRefreshAt; }
 
-    public PresenceStatus presenceOf(UUID profileId) {
+    public synchronized PresenceStatus presenceOf(UUID profileId) {
         return presence.getOrDefault(profileId, PresenceStatus.UNKNOWN);
+    }
+
+    private static HostInfo copyHost(HostInfo source) {
+        HostInfo copy = new HostInfo();
+        copy.running = source.running;
+        copy.target = source.target;
+        copy.useBypass = source.useBypass;
+        return copy;
+    }
+
+    private static JoinInfo copyJoin(JoinInfo source) {
+        JoinInfo copy = new JoinInfo();
+        copy.running = source.running;
+        copy.peer = source.peer;
+        copy.pmid = source.pmid;
+        copy.listen = source.listen;
+        return copy;
+    }
+
+    private static AuthInfo copyAuth(AuthInfo source) {
+        AuthInfo copy = new AuthInfo();
+        copy.authenticated = source.authenticated;
+        copy.profileId = source.profileId;
+        copy.name = source.name;
+        return copy;
     }
 
     public void addChangeListener(Runnable r) {
